@@ -1,6 +1,6 @@
 {
-    "name": "app_pt",
-    "short_name": "app_pt",
+    "name": "app_cliente",
+    "short_name": "app_cliente",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -25,6 +25,7 @@ import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
 // ignore: deprecated_member_use
 import 'js_stub.dart' if (dart.library.js) 'dart:js' as js;
 import 'gif_exercise_catalog.dart';
+import 'workout_tutorial.dart';
 
 // Colore accento globale (tema)
 final ValueNotifier<Color> appAccentNotifier = ValueNotifier<Color>(
@@ -553,6 +554,38 @@ extension _WeekOfYear on DateTime {
   }
 }
 
+/// Manage badge reset if 1 week passed since first badge OR new microcycle started
+Future<void> _manageBadgeResetCliente() async {
+  final prefs = await SharedPreferences.getInstance();
+  final now = DateTime.now();
+  final thisWeek = _isoWeekStr(now);
+  
+  final badgesStartStr = prefs.getString('badges_start_date_c');
+  if (badgesStartStr == null) {
+    await prefs.setString('badges_start_date_c', now.toIso8601String());
+    return;
+  }
+  
+  final badgesStart = DateTime.tryParse(badgesStartStr);
+  if (badgesStart == null) return;
+  
+  final daysPassed = now.difference(badgesStart).inDays;
+  final shouldResetByTime = daysPassed >= 7;
+  
+  final lastBadgeMicrocycleWeek = prefs.getString('last_badge_microcycle_week_c') ?? '';
+  final currentMicrocycleWeek = prefs.getString('current_microcycle_week_c') ?? thisWeek;
+  final shouldResetByMicrocycle = lastBadgeMicrocycleWeek.isNotEmpty && lastBadgeMicrocycleWeek != currentMicrocycleWeek;
+  
+  if (shouldResetByTime || shouldResetByMicrocycle) {
+    await prefs.remove('badges_start_date_c');
+    if (shouldResetByTime) {
+      await prefs.setString('last_badge_reset_week_c', thisWeek);
+    }
+  } else {
+    await prefs.setString('current_microcycle_week_c', thisWeek);
+  }
+}
+
 Future<int> updateStreakCliente(
   String dayName,
   List<String> totalSessionNames,
@@ -562,6 +595,18 @@ Future<int> updateStreakCliente(
   final nowWeek = _isoWeekStr(now);
   final lastWeek = prefs.getString('streak_last_week_c') ?? '';
   int streakCount = prefs.getInt('streak_count_c') ?? 0;
+
+  // ─── MIGRATION: Se esiste la vecchia chiave 'streak_c' e non è ancora stata migrata ───
+  if (prefs.getString('streak_migration_done_c') == null && prefs.containsKey('streak_c')) {
+    final oldStreakWeeks = prefs.getInt('streak_c') ?? 0;
+    // Converti settimane a microcicli (approssimato: 3 sessioni/settimana ~= 1 settimana per microciclo)
+    // Se l'utente aveva già completato 2+ settimane, assume 2 microcicli
+    final migratedMicrocycles = oldStreakWeeks > 0 ? 2 : 0;
+    streakCount = migratedMicrocycles;
+    await prefs.setInt('streak_count_c', streakCount);
+    await prefs.setString('streak_migration_done_c', 'true');
+    // Nota: non rimuovere 'streak_c', potrebbe servire per debug
+  }
 
   final rawPrev = prefs.getString('streak_prev_completed_c');
   final prevDone = rawPrev != null
@@ -597,6 +642,10 @@ Future<int> updateStreakCliente(
     'last_workout_date_c',
     now.toIso8601String().split('T')[0],
   );
+  
+  // Manage badge reset
+  await _manageBadgeResetCliente();
+  
   return streakCount;
 }
 
@@ -1388,6 +1437,73 @@ class _ClientMainPageState extends State<ClientMainPage>
                   setState(() => _stDisableWeightKeyboard = v);
                   _saveMainSettings();
                 },
+              ),
+              const Divider(color: Colors.white12),
+
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  'TUTORIAL',
+                  style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 11,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool('workout_tutorial_shown', false);
+                  if (mounted) {
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (c, anim, _) => WorkoutTutorial(
+                          accentColor: accent,
+                          onComplete: () {
+                            Navigator.pop(context);
+                            prefs.setBool('workout_tutorial_shown', true);
+                          },
+                        ),
+                        transitionsBuilder: (c, anim, _, child) => FadeTransition(
+                          opacity: anim,
+                          child: child,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(10),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: accent.withAlpha(100),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.school_outlined,
+                        color: accent,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Rivedere Tutorial',
+                          style: TextStyle(
+                            color: accent,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const Divider(color: Colors.white12),
 
@@ -3046,9 +3162,34 @@ class _ClientMainPageState extends State<ClientMainPage>
   }
 
   void _startWorkout(WorkoutDay d) async {
+    // Check if tutorial should be shown
+    final prefs = await SharedPreferences.getInstance();
+    final tutorialShown = prefs.getBool('workout_tutorial_shown') ?? false;
+    
+    if (!tutorialShown && !kIsWeb) {
+      // Show tutorial first
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (c, anim, _) => WorkoutTutorial(
+            accentColor: appAccentNotifier.value,
+            onComplete: () {
+              Navigator.pop(context);
+            },
+          ),
+          transitionsBuilder: (c, anim, _, child) => FadeTransition(
+            opacity: anim,
+            child: child,
+          ),
+        ),
+      );
+      await prefs.setBool('workout_tutorial_shown', true);
+      if (!mounted) return;
+    }
+    
     // Cancella SEMPRE lo snapshot precedente: ogni tap su "Allena ora" è una nuova sessione.
     // Il ripristino automatico avviene solo se l'app viene chiusa MID-workout.
-    final prefs = await SharedPreferences.getInstance();
     await prefs.remove('workout_in_progress_${d.dayName}');
     // Resetta i risultati in memoria dell'allenamento precedente
     for (final ex in d.exercises) {

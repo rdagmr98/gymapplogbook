@@ -5,8 +5,7 @@ plugins {
 }
 
 android {
-    // Deve essere l'ID originale per sovrascrivere l'app vecchia
-    namespace = "com.example.app_cliente" 
+    namespace = "com.example.app_cliente"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,10 +20,8 @@ android {
     }
 
     defaultConfig {
-        // QUESTA È LA TARGA CHE ANDROID CERCA PER L'AGGIORNAMENTO
         applicationId = "com.example.app_cliente"
-        
-        minSdk = flutter.minSdkVersion 
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -37,7 +34,6 @@ android {
 
     buildTypes {
         release {
-            // Sintassi corretta per Kotlin DSL (.kts)
             isMinifyEnabled = false
             isShrinkResources = false
             signingConfig = signingConfigs.getByName("debug")

@@ -3250,7 +3250,7 @@ class _ClientMainPageState extends State<ClientMainPage>
               ),
             ),
             Text(
-              _streak == 1 ? 'settimana' : 'settimane',
+              _streak == 1 ? 'mc' : 'mc',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.orange,
@@ -3264,14 +3264,14 @@ class _ClientMainPageState extends State<ClientMainPage>
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Completa TUTTE le sessioni della tua scheda ogni settimana per incrementare il contatore.\n\nSe salti anche solo una sessione in una settimana, la streak si azzera.\n\nSii costante — ogni settimana conta! 💪',
+              'Completa TUTTE le sessioni della tua scheda ogni microciclo per incrementare il contatore.\n\nSe salti anche solo una sessione in un microciclo, la streak si azzera.\n\nSii costante — ogni microciclo conta! 💪',
               style: TextStyle(color: Colors.white70, fontSize: 13),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 14),
             if (myRoutine.isNotEmpty) ...[
               Text(
-                '${_streakDone.where((n) => myRoutine.any((d) => d.dayName == n)).length}/${myRoutine.length} sessioni questa settimana',
+                '${_streakDone.where((n) => myRoutine.any((d) => d.dayName == n)).length}/${myRoutine.length} sessioni questo microciclo',
                 style: const TextStyle(color: Colors.white54, fontSize: 11),
               ),
               const SizedBox(height: 6),
@@ -3527,8 +3527,8 @@ class _ClientMainPageState extends State<ClientMainPage>
                                       ),
                                       Text(
                                         _streak == 1
-                                            ? 'settimana'
-                                            : 'settimane',
+                                            ? 'mc'
+                                            : 'mc',
                                         style: const TextStyle(
                                           color: Colors.white38,
                                           fontSize: 10,
@@ -3571,7 +3571,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '$_streak ${_streak == 1 ? 'settimana' : 'settimane'}',
+                                      '$_streak ${_streak == 1 ? 'mc' : 'mc'}',
                                       style: const TextStyle(
                                         color: Colors.orange,
                                         fontSize: 13,
@@ -4589,7 +4589,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              'Sessione sbloccata! $_streakDoneCount/$_streakTotalCount questa settimana',
+                              'Sessione sbloccata! $_streakDoneCount/$_streakTotalCount questo microciclo',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -4687,7 +4687,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                       if (_currentStreak > 0) ...[
                         const SizedBox(height: 6),
                         Text(
-                          '🔥 $_currentStreak ${_currentStreak == 1 ? 'settimana' : 'settimane'} di fila!',
+                          '🔥 $_currentStreak ${_currentStreak == 1 ? 'mc' : 'mc'} di fila!',
                           style: const TextStyle(
                             color: Colors.orange,
                             fontSize: 14,

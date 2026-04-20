@@ -23,6 +23,8 @@ class _WorkoutTutorialState extends State<WorkoutTutorial> with TickerProviderSt
   int _exerciseIndex = 0;
   String _enteredWeight = '';
   String _enteredReps = '';
+  bool _weightEntered = false;
+  bool _repsEntered = false;
   int _recoveryTimeLeft = 10;
   Timer? _recoveryTimer;
   bool _showRecoveryTimer = false;

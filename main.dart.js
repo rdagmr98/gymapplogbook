@@ -50647,8 +50647,7 @@ $S:141}
 A.aCV.prototype={
 $1(a){var s=null,r=this.a.a.w.q(0,a),q=A.ak(10),p=r?B.mh:s,o=r?s:B.by,n=A.cJ(r?B.T:B.aX,1),m=r?A.c([new A.cK(0,B.bg,A.Y(60,B.T.m()>>>16&255,B.T.m()>>>8&255,B.T.m()&255),B.j,6)],t.E):s,l=A.ak(6),k=r?B.Ky:B.Kz
 k=A.hs(l,new A.Aa(k,A.fk("assets/icon_client.png",B.N,new A.aCU(r),s,28,28),s))
-l=a.length>6?B.e.ak(a,0,6):a
-return A.aZ(s,A.bh(A.c([k,B.Cq,A.a7(l,s,B.am,s,s,A.b2(s,s,r?B.h:B.b0,s,s,s,s,s,s,s,s,7,s,s,B.a1,s,s,!0,s,s,s,s,s,s,s,s),B.ay,s)],t.p),B.p,B.l,B.r),B.o,s,s,new A.aK(o,s,n,q,m,p,B.u),s,s,s,B.Kn,s,s,60)},
+return A.aZ(s,A.bh(A.c([k,B.Cq,A.a7(a,s,B.am,s,s,A.b2(s,s,r?B.h:B.b0,s,s,s,s,s,s,s,s,7,s,s,B.a1,s,s,!0,s,s,s,s,s,s,s,s),B.ay,s)],t.p),B.p,B.l,B.r),B.o,s,s,new A.aK(o,s,n,q,m,p,B.u),s,s,s,B.Kn,s,s,60)},
 $S:613}
 A.aCU.prototype={
 $3(a,b,c){return A.dI(B.cF,this.a?B.h:B.aQ,null,24)},

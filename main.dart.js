@@ -48159,7 +48159,7 @@ for(s=p.CW,s=new A.cM(s,s.r,s.e);s.v();){q=s.d
 q.a4$=r
 q.L$=0}p.aI()},
 nk(a){this.k2=a
-if(a===B.ce)this.kF()},
+if(a===B.ce)if(!this.ay)this.kF()},
 F6(){var s=0,r=A.I(t.H),q
 var $async$F6=A.J(function(a,b){if(a===1)return A.F(b,r)
 for(;;)switch(s){case 0:s=1

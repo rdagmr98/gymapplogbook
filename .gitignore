@@ -1,3 +1,8 @@
+# Keystore e credenziali firma (backup in Documents\releases\)
+*.keystore
+*.jks
+android/key.properties
+
 # Miscellaneous
 *.class
 *.log

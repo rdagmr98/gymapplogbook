@@ -1,12 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keyProps = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) load(f.inputStream())
+}
+
 android {
-    // Deve essere l'ID originale per sovrascrivere l'app vecchia
-    namespace = "com.example.app_cliente" 
+    namespace = "com.example.app_cliente"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,11 +26,18 @@ android {
         jvmTarget = "17"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(keyProps["storeFile"] as String)
+            storePassword = keyProps["storePassword"] as String
+            keyAlias = keyProps["keyAlias"] as String
+            keyPassword = keyProps["keyPassword"] as String
+        }
+    }
+
     defaultConfig {
-        // QUESTA È LA TARGA CHE ANDROID CERCA PER L'AGGIORNAMENTO
         applicationId = "com.example.app_cliente"
-        
-        minSdk = flutter.minSdkVersion 
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -37,10 +50,9 @@ android {
 
     buildTypes {
         release {
-            // Sintassi corretta per Kotlin DSL (.kts)
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

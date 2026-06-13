@@ -25,6 +25,8 @@ import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
 import 'js_stub.dart' if (dart.library.js) 'dart:js' as js;
 import 'gif_exercise_catalog.dart';
 
+const _kGymAssetsBase = 'https://rdagmr98.github.io/GymApp/';
+
 // Colore accento globale (tema)
 final ValueNotifier<Color> appAccentNotifier = ValueNotifier<Color>(
   const Color(0xFF00F2FF),
@@ -1759,8 +1761,8 @@ class _ClientMainPageState extends State<ClientMainPage>
                   Positioned.fill(
                     child: Opacity(
                       opacity: 0.15,
-                      child: Image.asset(
-                        'assets/muscle/${day.muscleImage}',
+                      child: Image.network(
+                        '${_kGymAssetsBase}assets/muscle/${day.muscleImage}',
                         fit: BoxFit.cover,
                         alignment: Alignment.centerRight,
                       ),
@@ -1785,8 +1787,8 @@ class _ClientMainPageState extends State<ClientMainPage>
                             tag: 'muscle_${day.muscleImage}',
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: Image.asset(
-                                'assets/muscle/${day.muscleImage}',
+                              child: Image.network(
+                                '${_kGymAssetsBase}assets/muscle/${day.muscleImage}',
                                 width: 64,
                                 height: 64,
                                 fit: BoxFit.cover,
@@ -1929,8 +1931,8 @@ class _ClientMainPageState extends State<ClientMainPage>
                       },
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(14),
-                        child: Image.asset(
-                          'assets/muscle/${day.muscleImage}',
+                        child: Image.network(
+                          '${_kGymAssetsBase}assets/muscle/${day.muscleImage}',
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
@@ -2008,8 +2010,8 @@ class _ClientMainPageState extends State<ClientMainPage>
                     child: Hero(
                       tag: 'muscle_$imageFile',
                       child: InteractiveViewer(
-                        child: Image.asset(
-                          'assets/muscle/$imageFile',
+                        child: Image.network(
+                          '${_kGymAssetsBase}assets/muscle/$imageFile',
                           fit: BoxFit.contain,
                         ),
                       ),
@@ -2256,8 +2258,8 @@ class _ClientMainPageState extends State<ClientMainPage>
     final info = (ex.gifFilename != null ? findByGifSlug(ex.gifFilename!) : null) ??
         findAnyExercise(ex.name);
     final gifPath = ex.gifFilename != null
-        ? 'assets/gif/${ex.gifFilename}.gif'
-        : info != null ? 'assets/gif/${info.gifSlug}.gif' : null;
+        ? '${_kGymAssetsBase}assets/gif/${ex.gifFilename}.gif'
+        : info != null ? '${_kGymAssetsBase}assets/gif/${info.gifSlug}.gif' : null;
 
     showModalBottomSheet(
       context: ctx,
@@ -2326,7 +2328,7 @@ class _ClientMainPageState extends State<ClientMainPage>
             const SizedBox(height: 16),
             // GIF esercizio
             if (gifPath != null)
-              Image.asset(
+              Image.network(
                 gifPath,
                 width: 280,
                 height: 280,
@@ -2347,8 +2349,8 @@ class _ClientMainPageState extends State<ClientMainPage>
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (_, i) => ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(
-                      'assets/muscle/${info.muscleImages[i]}',
+                    child: Image.network(
+                      '${_kGymAssetsBase}assets/muscle/${info.muscleImages[i]}',
                       width: 100,
                       height: 80,
                       fit: BoxFit.cover,
@@ -4935,8 +4937,8 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     final info = (gifFilename != null ? findByGifSlug(gifFilename) : null) ??
         findAnyExercise(exName);
     final gifPath = gifFilename != null
-        ? 'assets/gif/$gifFilename.gif'
-        : info != null ? 'assets/gif/${info.gifSlug}.gif' : null;
+        ? '${_kGymAssetsBase}assets/gif/$gifFilename.gif'
+        : info != null ? '${_kGymAssetsBase}assets/gif/${info.gifSlug}.gif' : null;
 
     showModalBottomSheet(
       context: context,
@@ -5004,7 +5006,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
               const SizedBox(height: 16),
               // GIF esercizio
               if (gifPath != null)
-                Image.asset(
+                Image.network(
                   gifPath,
                   width: 280,
                   height: 280,
@@ -5026,7 +5028,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                     itemBuilder: (_, i) => ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: Image.asset(
-                        'assets/muscle/${info.muscleImages[i]}',
+                        '${_kGymAssetsBase}assets/muscle/${info.muscleImages[i]}',
                         width: 100,
                         height: 80,
                         fit: BoxFit.cover,
@@ -5184,9 +5186,9 @@ class _WorkoutEngineState extends State<WorkoutEngine>
             findAnyExercise(_prossimoNome))
         : null;
     final prossimoGifPath = prossimoConfig?.gifFilename != null
-        ? 'assets/gif/${prossimoConfig!.gifFilename}.gif'
+        ? '${_kGymAssetsBase}assets/gif/${prossimoConfig!.gifFilename}.gif'
         : prossimoInfo != null
-            ? 'assets/gif/${prossimoInfo.gifSlug}.gif'
+            ? '${_kGymAssetsBase}assets/gif/${prossimoInfo.gifSlug}.gif'
             : null;
 
     final accent = Theme.of(context).colorScheme.primary;
@@ -5306,7 +5308,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                                 if (prossimoGifPath != null) ...[
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(10),
-                                    child: Image.asset(
+                                    child: Image.network(
                                       prossimoGifPath,
                                       width: 80,
                                       height: 80,

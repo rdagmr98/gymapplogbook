@@ -103,6 +103,7 @@ class _YouTubeSearchViewState extends State<YouTubeSearchView> {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   tz_data.initializeTimeZones();
+  tz.setLocalLocation(tz.getLocation('Europe/Rome'));
 
   // Inizializzazione fusi orari
 
@@ -549,8 +550,8 @@ Future<void> scheduleStreakReminderCliente() async {
   try {
     // Cancella reminder precedente
     await flutterLocalNotificationsPlugin.cancel(9901);
-    // Pianifica per 48h da ora, poi ripete ogni giorno alla stessa ora
-    final scheduledDate = tz.TZDateTime.now(tz.UTC).add(const Duration(hours: 48));
+    // Notifica una tantum 48h dopo l'ultimo allenamento (ora locale)
+    final scheduledDate = tz.TZDateTime.now(tz.local).add(const Duration(hours: 48));
     await flutterLocalNotificationsPlugin.zonedSchedule(
       9901,
       '💪 Non perdere la tua streak!',
@@ -566,8 +567,7 @@ Future<void> scheduleStreakReminderCliente() async {
           icon: 'ic_notification',
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
+      androidScheduleMode: AndroidScheduleMode.inexact,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );

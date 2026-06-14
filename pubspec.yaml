@@ -44,7 +44,6 @@ dependencies:
   archive: ^3.6.1
   file_picker: ^10.3.10
   google_fonts: ^6.2.1
-  google_mobile_ads: ^5.2.0
   # Se vuoi tenere le timezone usa questa versione che non crasha:
 
 

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="16dp">
+
+    <!-- HEADER: app name + streak -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:text="GymLogbook"
+            android:textColor="#80EAEEF4"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.05"/>
+
+        <TextView
+            android:id="@+id/widget_streak"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:text="0"
+            android:textColor="#FF1A1A1E"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:background="@drawable/widget_badge_done"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp"/>
+    </RelativeLayout>
+
+    <!-- MAIN CONTENT: muscle image + workout info -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="10dp">
+
+        <!-- Muscle image: large version, fitCenter keeps within bounds -->
+        <ImageView
+            android:id="@+id/widget_muscle"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginEnd="14dp"
+            android:background="@drawable/widget_muscle_bg"
+            android:padding="7dp"
+            android:scaleType="fitCenter"/>
+
+        <!-- Workout text info -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PROSSIMO ALLENAMENTO"
+                android:textColor="#55EAEEF4"
+                android:textSize="10sp"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="3dp"/>
+
+            <TextView
+                android:id="@+id/widget_workout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Caricamento..."
+                android:textColor="#FFEAEEF4"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:lineSpacingMultiplier="1.1"/>
+        </LinearLayout>
+
+        <!-- Play button (circle) -->
+        <TextView
+            android:id="@+id/widget_start_btn"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="10dp"
+            android:gravity="center"
+            android:text="&#9654;"
+            android:textColor="#FF1A1A1E"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:background="@drawable/widget_play_btn"/>
+    </LinearLayout>
+
+    <!-- FOOTER: session muscle-icon badges (up to 7) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/widget_badge_1"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginEnd="6dp"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:background="@drawable/widget_badge_pending"/>
+
+        <ImageView
+            android:id="@+id/widget_badge_2"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginEnd="6dp"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:background="@drawable/widget_badge_pending"/>
+
+        <ImageView
+            android:id="@+id/widget_badge_3"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginEnd="6dp"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:background="@drawable/widget_badge_pending"/>
+
+        <ImageView
+            android:id="@+id/widget_badge_4"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginEnd="6dp"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:background="@drawable/widget_badge_pending"/>
+
+        <ImageView
+            android:id="@+id/widget_badge_5"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginEnd="6dp"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:background="@drawable/widget_badge_pending"/>
+
+        <ImageView
+            android:id="@+id/widget_badge_6"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginEnd="6dp"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:background="@drawable/widget_badge_pending"/>
+
+        <ImageView
+            android:id="@+id/widget_badge_7"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:background="@drawable/widget_badge_pending"/>
+
+        <!-- Spacer -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"/>
+
+        <TextView
+            android:id="@+id/widget_progress_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0/0"
+            android:textColor="#70EAEEF4"
+            android:textSize="13sp"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+</LinearLayout>

@@ -22,8 +22,6 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-
 // Se è WEB usa dart:html, se è APK usa il nostro stub finto
 import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
 // ignore: deprecated_member_use
@@ -36,11 +34,6 @@ import 'workout_tutorial.dart';
 bool _isDarkCtx(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark;
 
-// AdMob constants
-const String kWorkoutNativeAdFactoryId = 'workout_native';
-const String kWorkoutInlineNativeAdUnitId = 'ca-app-pub-2556899149200560/1884973095';
-const String kTimerRestNativeAdUnitId = 'ca-app-pub-2556899149200560/7742361478';
-const String kWorkoutRecapNativeAdUnitId = 'ca-app-pub-2556899149200560/8785030152';
 
 final ValueNotifier<Color> appAccentNotifier = ValueNotifier<Color>(
   const Color(0xFF00F2FF),
@@ -484,7 +477,6 @@ void main() async {
     final _p = await SharedPreferences.getInstance();
     AppL.setLang(_p.getString('app_lang') ?? 'it');
   }
-  if (!kIsWeb) await MobileAds.instance.initialize();
 
   // Inizializzazione fusi orari
 

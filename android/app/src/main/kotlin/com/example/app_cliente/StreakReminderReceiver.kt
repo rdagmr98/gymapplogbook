@@ -21,7 +21,7 @@ class StreakReminderReceiver : BroadcastReceiver() {
             nm.createNotificationChannel(channel)
         }
 
-        val title = intent.getStringExtra("title") ?: "💪 Non perdere la tua streak!"
+        val title = intent.getStringExtra("title") ?: "Non perdere la tua streak!"
         val body = intent.getStringExtra("body")
             ?: "Non ti alleni da 2 giorni. Allenati oggi per mantenere i tuoi progressi!"
 

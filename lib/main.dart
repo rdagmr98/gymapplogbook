@@ -1164,7 +1164,7 @@ Future<void> scheduleStreakReminderCliente({bool force = false}) async {
     final scheduledDate = lastWorkout.add(const Duration(hours: 48));
     // Salva l'orario pianificato
     await prefs.setString('streak_reminder_next_fire_c', scheduledDate.millisecondsSinceEpoch.toString());
-    const title = '💪 Non perdere la tua streak!';
+    const title = 'Non perdere la tua streak!';
     const body =
         'Non ti alleni da 2 giorni. Allenati oggi per mantenere i tuoi progressi!';
     // Salva title/body per BootCompletedReceiver

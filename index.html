@@ -16,43 +16,20 @@
   -->
   <base href="/gymapplogbook/">
 
-  <script>
-    // QR download redirect — runs before Flutter loads
-    (function () {
-      var p = window.location.pathname;
-      if (p.endsWith('/download') || p.endsWith('/download.html') || p.endsWith('/download/')) {
-        var ua = navigator.userAgent || navigator.vendor || '';
-        var isAndroid = /android/i.test(ua);
-        var isIOS = /ipad|iphone|ipod/i.test(ua) && !window.MSStream;
-        if (isAndroid) {
-          window.location.replace('https://play.google.com/store/apps/details?id=com.gianmarco.gym_app');
-        } else if (isIOS) {
-          window.location.replace('https://rdagmr98.github.io/GymApp/');
-        } else {
-          // Desktop: show simple redirect page
-          document.open();
-          document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>GymApp</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#1a1a2e;font-family:system-ui,sans-serif;color:#fff;text-align:center}.c{padding:40px}.a{display:inline-block;margin:10px;padding:14px 28px;border-radius:14px;text-decoration:none;font-weight:700;font-size:1.1em}.g{background:linear-gradient(135deg,#3ddc84,#00897b);color:#fff}.p{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}</style></head><body><div class="c"><h1>GymApp</h1><p>Scegli la tua piattaforma:</p><a class="a g" href="https://play.google.com/store/apps/details?id=com.gianmarco.gym_app">&#x1F4F1; Android (Play Store)</a><br><a class="a p" href="https://rdagmr98.github.io/GymApp/">&#xF8FF; iPhone (Web App)</a></div></body></html>');
-          document.close();
-        }
-      }
-    })();
-  </script>
-
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="GymLogbook: scheda, timer e progressi allenamento per atleti.">
+  <meta name="description" content="A new Flutter project.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="GymLogbook">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/gymlogbook-home-180.png?v=2">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="app_cliente">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="gymlogbook-favicon.png?v=2"/>
+  <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>GymLogbook</title>
+  <title>app_cliente</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<script>
+/* Redirect automatico per piattaforma (Android -> Play Store, iOS -> GymApp Web).
+   Eseguito subito: gli utenti mobile non vedono mai il fallback. */
+(function(){
+  var ua = navigator.userAgent || navigator.vendor || window.opera || '';
+  var ANDROID = 'https://play.google.com/store/apps/details?id=com.gianmarco.gym_app';
+  var IOS = 'https://rdagmr98.github.io/GymApp/';
+  var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /android/i.test(ua);
+  if (isAndroid) { location.replace(ANDROID); }
+  else if (isIOS) { location.replace(IOS); }
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scarica GymApp</title>
+<meta name="description" content="Scarica GymApp: Android gratis su Google Play, iPhone come Web App.">
+<meta name="theme-color" content="#000000">
+<meta name="robots" content="noindex">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;
+  background:#000;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:28px;
+  background-image:radial-gradient(60% 45% at 50% 0%,rgba(0,242,255,.18),transparent 60%)}
+.box{max-width:430px;width:100%}
+.logo{width:88px;height:88px;margin:0 auto 18px;display:grid;place-items:center;border-radius:22px;
+  background:linear-gradient(160deg,#0e1117,#05070a);border:1px solid rgba(0,242,255,.22);
+  box-shadow:0 0 32px rgba(0,242,255,.4)}
+.logo svg{width:50px;height:50px;color:#00F2FF}
+.wm{font-size:30px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+.wm b{color:#00F2FF;text-shadow:0 0 18px rgba(0,242,255,.6)}
+.sub{color:#9aa1ad;font-size:15px;margin-bottom:30px}
+.btns{display:flex;flex-direction:column;gap:14px}
+.btn{display:flex;align-items:center;gap:14px;justify-content:flex-start;text-align:left;text-decoration:none;color:#fff;
+  padding:15px 20px;border-radius:16px;border:1px solid rgba(0,242,255,.18);
+  background:linear-gradient(180deg,#0c0f15,#07090d);transition:.2s}
+.btn:hover{border-color:#00F2FF;box-shadow:0 0 26px rgba(0,242,255,.35);transform:translateY(-2px)}
+.btn.primary{background:#00F2FF;color:#001014;border-color:#00F2FF;box-shadow:0 0 26px rgba(0,242,255,.45)}
+.btn svg{width:30px;height:30px;flex:none;fill:#00F2FF}
+.btn.primary svg{fill:#001014}
+.btn .t{display:flex;flex-direction:column;line-height:1.2}
+.btn .t small{font-size:12px;opacity:.7;font-weight:600}
+.btn .t span{font-size:18px;font-weight:800}
+.btn .tag{margin-left:auto;font-size:12px;font-weight:800;padding:5px 11px;border-radius:999px;
+  background:rgba(0,242,255,.14);color:#00F2FF;border:1px solid rgba(0,242,255,.3)}
+.btn.primary .tag{background:rgba(0,16,20,.18);color:#001014;border-color:rgba(0,16,20,.25)}
+.note{margin-top:22px;color:#6b727d;font-size:12.5px}
+.redir{margin-bottom:18px;color:#00F2FF;font-size:13px;font-weight:700;display:none}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="redir" id="redir">Reindirizzamento in corso…</div>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5l11 11"/><path d="M21 21l-1-1"/><path d="M3 3l1 1"/><path d="M18 22l4-4"/><path d="M2 6l4-4"/><path d="M3 10l7-7"/><path d="M14 21l7-7"/></svg>
+  </div>
+  <div class="wm">Gym<b>App</b></div>
+  <div class="sub">Scegli il tuo dispositivo per iniziare</div>
+  <div class="btns">
+    <a class="btn primary" href="https://play.google.com/store/apps/details?id=com.gianmarco.gym_app">
+      <svg viewBox="0 0 24 24"><path d="M3.6 2.3c-.32.18-.5.55-.5 1.05v17.3c0 .5.18.87.5 1.05l.06.03 9.7-9.7v-.06zM17.1 9.36l-3.23-1.86-2.7 2.7 2.7 2.7 3.25-1.87c.93-.53.93-1.4-.02-1.67M5.5 1.9l7.8 4.5 2.18-2.18zM5.5 22.1l9.98-5.76-2.18-2.18z"/></svg>
+      <span class="t"><small>Android · Google Play</small><span>Scarica l'app</span></span>
+      <span class="tag">Gratis</span>
+    </a>
+    <a class="btn" href="https://rdagmr98.github.io/GymApp/">
+      <svg viewBox="0 0 24 24"><path d="M16.36 12.7c.02 2.42 2.12 3.22 2.14 3.23-.02.05-.34 1.16-1.11 2.3-.66.99-1.35 1.97-2.43 1.99-1.06.02-1.4-.63-2.62-.63-1.21 0-1.59.61-2.6.65-1.04.04-1.84-1.07-2.51-2.05-1.36-1.98-2.4-5.6-1-8.04.69-1.21 1.93-1.98 3.28-2 1.03-.02 2 .69 2.62.69.62 0 1.81-.86 3.05-.73.52.02 1.98.21 2.91 1.58-.07.05-1.74 1.02-1.72 3.04M14.4 6.6c.55-.66.92-1.59.82-2.51-.79.03-1.75.53-2.32 1.19-.51.58-.96 1.52-.84 2.42.88.07 1.78-.45 2.34-1.1"/></svg>
+      <span class="t"><small>iPhone · iPad · Web App</small><span>Apri la Web App</span></span>
+      <span class="tag">1€/mese</span>
+    </a>
+  </div>
+  <div class="note">Android gratis su Google Play · iPhone come Web App (donazione 1€/mese)</div>
+</div>
+</body>
+</html>

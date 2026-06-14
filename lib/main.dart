@@ -6970,36 +6970,48 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                   Expanded(child: Center(child: _buildBoxEsercizioCompletato()))
                 else
                   Expanded(
-                    child: _DrumPickers(
-                      key: ValueKey('drum_$exI'),
-                      initialKg: lastW <= 0 ? 20.0 : lastW,
-                      initialReps: targetR,
-                      suggerisciAumento:
-                          suggerisciAumento && _showWeightSuggestion,
-                      useQuarterStep: _usesQuarterStepForExercise(ex, lastW),
-                      useEvenStep: _usesEvenStepForExercise(ex, lastW),
-                      useSingleStep: _usesSingleStepForExercise(ex, lastW),
-                      displayInPounds: _displayInPounds,
-                      allowKeyboardInput: !_disableWeightKeyboard,
-                      accent: accent,
-                      onKgChanged: (v) =>
-                          wC.text = formatWeightValue(v, maxDecimals: 2),
-                      onRepsChanged: (v) {
-                        rC.text = v.toString();
-                      },
-                      onWeightModeChanged:
-                          (useQuarterStep, useEvenStep, useSingleStep) {
-                            _setExerciseWeightMode(
-                              ex,
-                              useQuarterStep: useQuarterStep,
-                              useEvenStep: useEvenStep,
-                              useSingleStep: useSingleStep,
-                            );
-                          },
-                      onInteraction: () => _avviaTimerConTempo(timeToUse),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: _DrumPickers(
+                            key: ValueKey('drum_$exI'),
+                            initialKg: lastW <= 0 ? 20.0 : lastW,
+                            initialReps: targetR,
+                            suggerisciAumento:
+                                suggerisciAumento && _showWeightSuggestion,
+                            useQuarterStep: _usesQuarterStepForExercise(ex, lastW),
+                            useEvenStep: _usesEvenStepForExercise(ex, lastW),
+                            useSingleStep: _usesSingleStepForExercise(ex, lastW),
+                            displayInPounds: _displayInPounds,
+                            allowKeyboardInput: !_disableWeightKeyboard,
+                            accent: accent,
+                            onKgChanged: (v) =>
+                                wC.text = formatWeightValue(v, maxDecimals: 2),
+                            onRepsChanged: (v) {
+                              rC.text = v.toString();
+                            },
+                            onWeightModeChanged:
+                                (useQuarterStep, useEvenStep, useSingleStep) {
+                                  _setExerciseWeightMode(
+                                    ex,
+                                    useQuarterStep: useQuarterStep,
+                                    useEvenStep: useEvenStep,
+                                    useSingleStep: useSingleStep,
+                                  );
+                                },
+                            onInteraction: () => _avviaTimerConTempo(timeToUse),
+                          ),
+                        ),
+                        if (!giaFatto && timerActive)
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: _buildFloatingTimerChip(accent),
+                          ),
+                      ],
                     ),
                   ),
-                if (!giaFatto && timerActive) _buildFloatingTimerChip(accent),
                 if (!giaFatto)
                   Container(
                     padding: EdgeInsets.fromLTRB(

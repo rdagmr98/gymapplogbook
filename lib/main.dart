@@ -5782,11 +5782,10 @@ class _WorkoutEngineState extends State<WorkoutEngine>
   }
 
   Future<void> _shareWorkoutResult(BuildContext ctx) async {
-    // Compare using the MAX-WEIGHT set per exercise (S1 in a pyramid).
-    // Avoids distortions from the last/lightest set. Weight-up: cap both at min(currR,prevR).
     double? progressPct;
     if (_previousResults.isNotEmpty && _allCompletedExercises.isNotEmpty) {
-      double cur1RM = 0, prev1RM = 0;
+      double totalDelta = 0;
+      int matchCount = 0;
       for (final ex in _allCompletedExercises) {
         final currSeries = (ex['series'] as List);
         final prevSeries = _previousResults[ex['exercise']] ?? [];
@@ -5808,10 +5807,12 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         final effPR = weightUp ? (bestPR < bestCR ? bestPR : bestCR) : bestPR;
         final ec = effCR > 0 ? bestCW * (1 + effCR / (30.0 + bestCW / 10.0)) : bestCW;
         final ep = effPR > 0 ? bestPW * (1 + effPR / (30.0 + bestPW / 10.0)) : bestPW;
-        if (ec > cur1RM) cur1RM = ec;
-        if (ep > prev1RM) prev1RM = ep;
+        if (ep > 0) {
+          totalDelta += (ec - ep) / ep;
+          matchCount++;
+        }
       }
-      if (prev1RM > 0) progressPct = (cur1RM - prev1RM) / prev1RM * 100;
+      if (matchCount > 0) progressPct = totalDelta / matchCount * 100;
     }
     await showModalBottomSheet(
       useSafeArea: true,
@@ -10951,7 +10952,7 @@ class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
                   _badgeChip(
                     icon: widget.progressPercent! >= 0 ? '📈' : '📉',
                     label: 'vs prec.',
-                    value: '${widget.progressPercent! >= 0 ? '+' : ''}${widget.progressPercent!.toStringAsFixed(0)}%',
+                    value: '${widget.progressPercent! >= 0 ? '+' : ''}${widget.progressPercent!.toStringAsFixed(1)}%',
                     accent: widget.progressPercent! >= 0 ? Colors.greenAccent : Colors.redAccent,
                   ),
               ],
@@ -11190,7 +11191,6 @@ class _StreakShareSheet extends StatefulWidget {
 class _StreakShareSheetState extends State<_StreakShareSheet> {
   bool _sharing = false;
   bool _showBadges = true;
-  bool _showSessionCount = true;
   final GlobalKey _cardKey = GlobalKey();
 
   Widget _buildStoryCard() {
@@ -11347,13 +11347,6 @@ class _StreakShareSheetState extends State<_StreakShareSheet> {
                       );
                     }),
                   ),
-                  if (_showSessionCount) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      '$doneCount / $total sessioni completate',
-                      style: TextStyle(color: _isDarkCtx(context) ? Colors.white54 : Colors.black54, fontSize: 12),
-                    ),
-                  ],
                 ],
                 const Spacer(),
                 Text(
@@ -11415,8 +11408,6 @@ class _StreakShareSheetState extends State<_StreakShareSheet> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _toggleChip(label: '🏅 Badge', active: _showBadges, onTap: () => setState(() => _showBadges = !_showBadges)),
-              const SizedBox(width: 8),
-              _toggleChip(label: '📊 Sessioni', active: _showSessionCount, onTap: () => setState(() => _showSessionCount = !_showSessionCount)),
             ],
           ),
           const SizedBox(height: 14),

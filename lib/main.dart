@@ -2747,14 +2747,31 @@ class _ClientMainPageState extends State<ClientMainPage>
         ),
       );
     }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
-      children: [
-        for (int i = 0; i < myRoutine.length; i++) ...[
-          _buildRoutineCard(myRoutine[i], accent, i),
-          const SizedBox(height: 14),
-        ],
-      ],
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        final n = myRoutine.length;
+        const double topPad = 28, bottomPad = 32;
+        final double gaps = 14.0 * (n > 1 ? n - 1 : 0);
+        final double cardH = n > 0
+            ? ((constraints.maxHeight - topPad - bottomPad - gaps) / n)
+                .clamp(80.0, 220.0)
+            : 100.0;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (int i = 0; i < n; i++) ...[
+                SizedBox(
+                  height: cardH,
+                  child: _buildRoutineCard(myRoutine[i], accent, i),
+                ),
+                if (i < n - 1) const SizedBox(height: 14),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -2914,6 +2931,7 @@ class _ClientMainPageState extends State<ClientMainPage>
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Stack(
+              alignment: Alignment.centerLeft,
               children: [
                 // Immagine sfondo sfumata a destra
                 if (day.muscleImage != null)

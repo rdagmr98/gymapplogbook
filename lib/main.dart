@@ -2754,7 +2754,7 @@ class _ClientMainPageState extends State<ClientMainPage>
         final double gaps = 14.0 * (n > 1 ? n - 1 : 0);
         final double cardH = n > 0
             ? ((constraints.maxHeight - topPad - bottomPad - gaps) / n)
-                .clamp(80.0, 220.0)
+                .clamp(80.0, double.infinity)
             : 100.0;
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
@@ -3974,12 +3974,9 @@ class _ClientMainPageState extends State<ClientMainPage>
   Widget _buildExPreviewList(WorkoutDay d, Color accent) {
     final List<Widget> items = [];
     final Set<int> processedGroups = {};
-    int count = 0;
     for (final ex in d.exercises) {
-      if (count >= 4) break;
       if (ex.supersetGroup == 0) {
         items.add(_exPreviewRow(ex.name, _repsSchemeText(ex), accent, false));
-        count++;
       } else {
         if (!processedGroups.contains(ex.supersetGroup)) {
           processedGroups.add(ex.supersetGroup);
@@ -3989,7 +3986,6 @@ class _ClientMainPageState extends State<ClientMainPage>
           final names = group.map((e) => e.name).join(' + ');
           final schemes = group.map((e) => _repsSchemeText(e)).join(' / ');
           items.add(_exPreviewRow(names, schemes, accent, true));
-          count++;
         }
       }
     }
@@ -4668,25 +4664,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                       // Exercise preview list
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                        child: Column(
-                          children: [
-                            _buildExPreviewList(d, accent),
-                            if (d.exercises.length > 4)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    '+ ${d.exercises.length - 4} altri',
-                                    style: TextStyle(
-                                      color: accent.withAlpha(150),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                        child: _buildExPreviewList(d, accent),
                       ),
                       // CTA button
                       Padding(

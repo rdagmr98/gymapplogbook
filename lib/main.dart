@@ -6034,14 +6034,21 @@ class _WorkoutEngineState extends State<WorkoutEngine>
 
     showModalBottomSheet(
       useSafeArea: true,
+      isScrollControlled: true,
       context: context,
       backgroundColor: _isDarkCtx(context) ? const Color(0xFF1C1C1E) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        child: Column(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          20,
+          24,
+          24 + scala.max(MediaQuery.of(ctx).padding.bottom, MediaQuery.of(ctx).viewPadding.bottom),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -6124,6 +6131,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
               ],
             ),
           ],
+          ),
         ),
       ),
     );

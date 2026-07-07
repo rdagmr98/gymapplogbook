@@ -6045,7 +6045,12 @@ class _WorkoutEngineState extends State<WorkoutEngine>
           24,
           20,
           24,
-          24 + scala.max(MediaQuery.of(ctx).padding.bottom, MediaQuery.of(ctx).viewPadding.bottom),
+          24 +
+              [
+                MediaQuery.of(ctx).padding.bottom,
+                MediaQuery.of(ctx).viewPadding.bottom,
+                64.0, // floor: alcuni device (es. Samsung One UI) riportano inset 0/errato per la nav bar
+              ].reduce(scala.max),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

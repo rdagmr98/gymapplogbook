@@ -6047,43 +6047,51 @@ class _WorkoutEngineState extends State<WorkoutEngine>
           24,
           24 + scala.max(MediaQuery.of(ctx).padding.bottom, MediaQuery.of(ctx).viewPadding.bottom),
         ),
-        child: SingleChildScrollView(
-          child: Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: _isDarkCtx(context) ? Colors.white24 : Colors.black26,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              currentEx.name.toUpperCase(),
-              style: TextStyle(
-                color: _isDarkCtx(context) ? Colors.white54 : Colors.black54,
-                fontSize: 12,
-                letterSpacing: 1,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Serie $setN",
-              style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _chipConferma(
-                  "${w % 1 == 0 ? w.toInt() : w} kg",
-                  const Color(0xFFFFD700),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: _isDarkCtx(context) ? Colors.white24 : Colors.black26,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      currentEx.name.toUpperCase(),
+                      style: TextStyle(
+                        color: _isDarkCtx(context) ? Colors.white54 : Colors.black54,
+                        fontSize: 12,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Serie $setN",
+                      style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _chipConferma(
+                          "${w % 1 == 0 ? w.toInt() : w} kg",
+                          const Color(0xFFFFD700),
+                        ),
+                        const SizedBox(width: 20),
+                        _chipConferma("$r reps", Theme.of(ctx).colorScheme.primary),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 20),
-                _chipConferma("$r reps", Theme.of(ctx).colorScheme.primary),
-              ],
+              ),
             ),
             const SizedBox(height: 24),
             Row(
@@ -6131,7 +6139,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
               ],
             ),
           ],
-          ),
         ),
       ),
     );

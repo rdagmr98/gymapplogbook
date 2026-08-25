@@ -27,6 +27,7 @@ import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
 // ignore: deprecated_member_use
 import 'js_stub.dart' if (dart.library.js) 'dart:js' as js;
 import 'gif_exercise_catalog.dart';
+import 'ads_service.dart';
 import 'workout_tutorial.dart';
 
 // Colore accento globale (tema)
@@ -534,6 +535,7 @@ void main() async {
       statusBarIconBrightness: Brightness.light,
     ),
   );
+  await initGymAds();
   runApp(const ClientGymApp());
 }
 
@@ -2691,7 +2693,11 @@ class _ClientMainPageState extends State<ClientMainPage>
         ],
       ),
       body: _currentIndex == 0 ? _buildRoutinePage() : _buildTrainPage(),
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Center(child: GymBannerAd()),
+          BottomNavigationBar(
         currentIndex: _currentIndex,
         backgroundColor: Theme.of(context).colorScheme.surface,
         selectedItemColor: Theme.of(context).colorScheme.primary,
@@ -2707,6 +2713,8 @@ class _ClientMainPageState extends State<ClientMainPage>
             icon: Icon(Icons.fitness_center_rounded),
             label: "Allenati",
           ),
+        ],
+      ),
         ],
       ),
     );

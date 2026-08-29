@@ -1,11 +1,11 @@
 {
-    "name": "app_cliente",
-    "short_name": "app_cliente",
+    "name": "GymApp",
+    "short_name": "GymApp",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "App palestra: schede PT, diario allenamento, timer e progressi.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

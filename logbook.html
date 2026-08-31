@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2556899149200560" crossorigin="anonymous"></script>
+<script>
+/* Redirect automatico iOS -> Web App (identico alla logica di download.html) */
+(function(){
+  var ua = navigator.userAgent || navigator.vendor || window.opera || '';
+  var WEBAPP = 'https://rdagmr98.github.io/gymapplogbook/';
+  var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) { location.replace(WEBAPP); }
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GymLogbook - Scarica l'app e le schede</title>
+<meta name="description" content="Scarica GymLogbook: APK sempre aggiornato per Android, Web App per iPhone. Scarica la tua scheda di allenamento.">
+<meta name="theme-color" content="#000000">
+<meta name="robots" content="noindex">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;
+  background:#000;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:28px 18px;
+  background-image:radial-gradient(60% 45% at 50% 0%,rgba(0,242,255,.18),transparent 60%)}
+.box{max-width:430px;width:100%}
+.logo{width:88px;height:88px;margin:0 auto 18px;display:grid;place-items:center;border-radius:22px;
+  background:linear-gradient(160deg,#0e1117,#05070a);border:1px solid rgba(0,242,255,.22);
+  box-shadow:0 0 32px rgba(0,242,255,.4)}
+.logo svg{width:50px;height:50px;color:#00F2FF}
+.wm{font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+.wm b{color:#00F2FF;text-shadow:0 0 18px rgba(0,242,255,.6)}
+.sub{color:#9aa1ad;font-size:15px;margin-bottom:26px}
+.btns{display:flex;flex-direction:column;gap:14px}
+.btn{display:flex;align-items:center;gap:14px;justify-content:flex-start;text-align:left;text-decoration:none;color:#fff;
+  padding:15px 20px;border-radius:16px;border:1px solid rgba(0,242,255,.18);
+  background:linear-gradient(180deg,#0c0f15,#07090d);transition:.2s;cursor:pointer;font:inherit;width:100%}
+.btn:hover{border-color:#00F2FF;box-shadow:0 0 26px rgba(0,242,255,.35);transform:translateY(-2px)}
+.btn.primary{background:#00F2FF;color:#001014;border-color:#00F2FF;box-shadow:0 0 26px rgba(0,242,255,.45)}
+.btn svg{width:30px;height:30px;flex:none;fill:#00F2FF}
+.btn.primary svg{fill:#001014}
+.btn .t{display:flex;flex-direction:column;line-height:1.2}
+.btn .t small{font-size:12px;opacity:.7;font-weight:600}
+.btn .t span{font-size:18px;font-weight:800}
+.btn .tag{margin-left:auto;font-size:12px;font-weight:800;padding:5px 11px;border-radius:999px;
+  background:rgba(0,242,255,.14);color:#00F2FF;border:1px solid rgba(0,242,255,.3)}
+.btn.primary .tag{background:rgba(0,16,20,.18);color:#001014;border-color:rgba(0,16,20,.25)}
+.btn:disabled{opacity:.5;cursor:wait}
+.note{margin-top:22px;color:#6b727d;font-size:12.5px}
+.sect{margin-top:34px;padding-top:26px;border-top:1px solid rgba(255,255,255,.08);text-align:left}
+.sect h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#9aa1ad;margin-bottom:14px;font-weight:700}
+.field{width:100%;padding:13px 15px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
+  background:#0b0d12;color:#fff;font-size:15px;margin-bottom:10px}
+.field:focus{outline:none;border-color:#00F2FF}
+.msg{font-size:13px;margin-top:10px;min-height:16px}
+.msg.ok{color:#00F2FF}
+.msg.err{color:#ff5c6c}
+.row-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.row-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;
+  border-radius:10px;background:#0b0d12;border:1px solid rgba(255,255,255,.08);font-size:13px}
+.row-item button{background:none;border:none;color:#ff5c6c;font-size:12px;cursor:pointer;font-weight:700}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5l11 11"/><path d="M21 21l-1-1"/><path d="M3 3l1 1"/><path d="M18 22l4-4"/><path d="M2 6l4-4"/><path d="M3 10l7-7"/><path d="M14 21l7-7"/></svg>
+  </div>
+  <div class="wm">Gym<b>Logbook</b></div>
+  <div class="sub">App per i tuoi allenamenti</div>
+  <div class="btns">
+    <button class="btn primary" id="androidBtn" onclick="downloadApk()">
+      <svg viewBox="0 0 24 24"><path d="M3.6 2.3c-.32.18-.5.55-.5 1.05v17.3c0 .5.18.87.5 1.05l.06.03 9.7-9.7v-.06zM17.1 9.36l-3.23-1.86-2.7 2.7 2.7 2.7 3.25-1.87c.93-.53.93-1.4-.02-1.67M5.5 1.9l7.8 4.5 2.18-2.18zM5.5 22.1l9.98-5.76-2.18-2.18z"/></svg>
+      <span class="t"><small id="androidSub">Android · APK</small><span id="androidLabel">Scarica l'app</span></span>
+      <span class="tag">Gratis</span>
+    </button>
+    <a class="btn" href="https://rdagmr98.github.io/gymapplogbook/">
+      <svg viewBox="0 0 24 24"><path d="M16.36 12.7c.02 2.42 2.12 3.22 2.14 3.23-.02.05-.34 1.16-1.11 2.3-.66.99-1.35 1.97-2.43 1.99-1.06.02-1.4-.63-2.62-.63-1.21 0-1.59.61-2.6.65-1.04.04-1.84-1.07-2.51-2.05-1.36-1.98-2.4-5.6-1-8.04.69-1.21 1.93-1.98 3.28-2 1.03-.02 2 .69 2.62.69.62 0 1.81-.86 3.05-.73.52.02 1.98.21 2.91 1.58-.07.05-1.74 1.02-1.72 3.04M14.4 6.6c.55-.66.92-1.59.82-2.51-.79.03-1.75.53-2.32 1.19-.51.58-.96 1.52-.84 2.42.88.07 1.78-.45 2.34-1.1"/></svg>
+      <span class="t"><small>iPhone · iPad</small><span>Apri la Web App</span></span>
+      <span class="tag">Gratis</span>
+    </a>
+  </div>
+  <div class="note">L'APK Android è sempre l'ultima versione pubblicata.</div>
+
+  <!-- Scheda atleta -->
+  <div class="sect">
+    <h2>La tua scheda</h2>
+    <input class="field" id="athleteName" placeholder="Il tuo nome e cognome" autocomplete="off">
+    <button class="btn primary" style="justify-content:center" onclick="downloadScheda()">Scarica la mia scheda</button>
+    <div class="msg" id="athleteMsg"></div>
+  </div>
+
+  <!-- Admin -->
+  <div class="sect">
+    <h2>Area trainer</h2>
+    <div id="adminLocked">
+      <input class="field" id="adminPass" type="password" placeholder="Password" autocomplete="off">
+      <button class="btn" style="justify-content:center" onclick="unlockAdmin()">Sblocca</button>
+      <div class="msg err" id="adminMsg"></div>
+    </div>
+    <div id="adminPanel" hidden>
+      <input class="field" id="uploadName" placeholder="Nome e cognome atleta" autocomplete="off">
+      <input class="field" id="uploadFile" type="file" accept=".pdf">
+      <button class="btn primary" style="justify-content:center" onclick="uploadScheda()" id="uploadBtn">Carica scheda</button>
+      <div class="msg" id="uploadMsg"></div>
+      <div class="row-list" id="schedeList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var REPO = 'rdagmr98/gymapplogbook';
+var GITHUB_TOKEN = 'GITHUB_TOKEN_PLACEHOLDER'; // token fine-grained, solo Contents R/W su questo repo
+
+function slugify(name){
+  return name.normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'');
+}
+
+// --- Download APK (sempre ultima release) ---
+function downloadApk(){
+  var btn = document.getElementById('androidBtn');
+  var sub = document.getElementById('androidSub');
+  btn.disabled = true; sub.textContent = 'Ricerca ultima versione...';
+  fetch('https://api.github.com/repos/' + REPO + '/releases/latest')
+    .then(function(r){ return r.json(); })
+    .then(function(rel){
+      var asset = (rel.assets || []).find(function(a){ return /arm64.*\.apk$/i.test(a.name); })
+        || (rel.assets || []).find(function(a){ return /\.apk$/i.test(a.name); });
+      if (!asset) throw new Error('no apk');
+      sub.textContent = 'Android · ' + (rel.tag_name || 'APK');
+      location.href = asset.browser_download_url;
+      btn.disabled = false;
+    })
+    .catch(function(){
+      sub.textContent = 'Errore, riprova';
+      btn.disabled = false;
+    });
+}
+
+// --- Download scheda per nome ---
+function downloadScheda(){
+  var name = document.getElementById('athleteName').value;
+  var msg = document.getElementById('athleteMsg');
+  msg.className = 'msg'; msg.textContent = '';
+  var slug = slugify(name);
+  if (!slug){ msg.className='msg err'; msg.textContent='Inserisci il tuo nome.'; return; }
+  var url = 'schede/' + slug + '.pdf';
+  fetch(url, { method: 'HEAD' }).then(function(r){
+    if (r.ok){
+      msg.className='msg ok'; msg.textContent='Scheda trovata, download in corso...';
+      location.href = url;
+    } else {
+      msg.className='msg err'; msg.textContent='Nessuna scheda trovata con questo nome. Scrivi nome e cognome come te li ha dati il trainer.';
+    }
+  }).catch(function(){
+    msg.className='msg err'; msg.textContent='Errore di rete, riprova.';
+  });
+}
+
+// --- Admin: sblocco ---
+function unlockAdmin(){
+  var pass = document.getElementById('adminPass').value;
+  var msg = document.getElementById('adminMsg');
+  if (pass === 'osare199'){
+    document.getElementById('adminLocked').hidden = true;
+    document.getElementById('adminPanel').hidden = false;
+    loadSchedeList();
+  } else {
+    msg.textContent = 'Password errata.';
+  }
+}
+
+// --- Admin: upload scheda (GitHub Contents API) ---
+function uploadScheda(){
+  var nameInput = document.getElementById('uploadName');
+  var fileInput = document.getElementById('uploadFile');
+  var msg = document.getElementById('uploadMsg');
+  var btn = document.getElementById('uploadBtn');
+  var slug = slugify(nameInput.value);
+  var file = fileInput.files[0];
+  msg.className = 'msg'; msg.textContent = '';
+  if (!slug){ msg.className='msg err'; msg.textContent='Inserisci il nome dell\'atleta.'; return; }
+  if (!file){ msg.className='msg err'; msg.textContent='Scegli un file PDF.'; return; }
+
+  btn.disabled = true; msg.textContent = 'Caricamento...';
+  var path = 'web/schede/' + slug + '.pdf';
+  var reader = new FileReader();
+  reader.onload = function(){
+    var b64 = reader.result.split(',')[1];
+    ghGetSha(path).then(function(sha){
+      return fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'token ' + GITHUB_TOKEN,
+          'Accept': 'application/vnd.github+json'
+        },
+        body: JSON.stringify({
+          message: 'scheda: ' + slug,
+          content: b64,
+          sha: sha || undefined
+        })
+      });
+    }).then(function(r){
+      if (!r.ok) throw new Error('upload failed');
+      msg.className='msg ok'; msg.textContent='Caricata. Online tra 1-2 minuti (rebuild automatico).';
+      btn.disabled = false;
+      fileInput.value = ''; nameInput.value = '';
+      setTimeout(loadSchedeList, 1500);
+    }).catch(function(){
+      msg.className='msg err'; msg.textContent='Errore durante il caricamento.';
+      btn.disabled = false;
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function ghGetSha(path){
+  return fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
+    headers: { 'Authorization': 'token ' + GITHUB_TOKEN }
+  }).then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){ return j ? j.sha : null; })
+    .catch(function(){ return null; });
+}
+
+function loadSchedeList(){
+  var list = document.getElementById('schedeList');
+  list.innerHTML = '';
+  fetch('https://api.github.com/repos/' + REPO + '/contents/web/schede', {
+    headers: { 'Authorization': 'token ' + GITHUB_TOKEN }
+  }).then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(items){
+      (items || []).filter(function(f){ return /\.pdf$/i.test(f.name); }).forEach(function(f){
+        var row = document.createElement('div');
+        row.className = 'row-item';
+        var span = document.createElement('span');
+        span.textContent = f.name.replace(/\.pdf$/i, '');
+        var del = document.createElement('button');
+        del.textContent = 'Elimina';
+        del.onclick = function(){ deleteScheda(f.path, f.sha); };
+        row.appendChild(span); row.appendChild(del);
+        list.appendChild(row);
+      });
+    }).catch(function(){});
+}
+
+function deleteScheda(path, sha){
+  fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github+json' },
+    body: JSON.stringify({ message: 'rimuovi scheda: ' + path, sha: sha })
+  }).then(function(){ loadSchedeList(); });
+}
+</script>
+</body>
+</html>

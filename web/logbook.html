@@ -70,7 +70,7 @@ body{min-height:100vh;display:flex;align-items:center;justify-content:center;tex
   <div class="sub">App per i tuoi allenamenti</div>
   <div class="btns">
     <button class="btn primary" id="androidBtn" onclick="downloadApk()">
-      <svg viewBox="0 0 24 24"><path d="M3.6 2.3c-.32.18-.5.55-.5 1.05v17.3c0 .5.18.87.5 1.05l.06.03 9.7-9.7v-.06zM17.1 9.36l-3.23-1.86-2.7 2.7 2.7 2.7 3.25-1.87c.93-.53.93-1.4-.02-1.67M5.5 1.9l7.8 4.5 2.18-2.18zM5.5 22.1l9.98-5.76-2.18-2.18z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24c-1.44-.65-3.06-1.01-4.47-1.01s-3.03.36-4.47 1.01L5.65 5.67c-.19-.29-.58-.38-.87-.2-.28.18-.37.54-.22.85L6.4 9.48C3.3 11.25 1.28 14.44 1 18h22c-.28-3.56-2.3-6.75-5.4-8.52zM7 15.25c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zm10 0c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25z"/></svg>
       <span class="t"><small id="androidSub">Android · APK</small><span id="androidLabel">Scarica l'app</span></span>
       <span class="tag">Gratis</span>
     </button>
@@ -100,7 +100,7 @@ body{min-height:100vh;display:flex;align-items:center;justify-content:center;tex
     </div>
     <div id="adminPanel" hidden>
       <input class="field" id="uploadName" placeholder="Nome e cognome atleta" autocomplete="off">
-      <input class="field" id="uploadFile" type="file" accept=".pdf">
+      <input class="field" id="uploadFile" type="file" accept=".workout">
       <button class="btn primary" style="justify-content:center" onclick="uploadScheda()" id="uploadBtn">Carica scheda</button>
       <div class="msg" id="uploadMsg"></div>
       <div class="row-list" id="schedeList"></div>
@@ -147,7 +147,7 @@ function downloadScheda(){
   msg.className = 'msg'; msg.textContent = '';
   var slug = slugify(name);
   if (!slug){ msg.className='msg err'; msg.textContent='Inserisci il tuo nome.'; return; }
-  var url = 'schede/' + slug + '.pdf';
+  var url = 'schede/' + slug + '.workout';
   fetch(url, { method: 'HEAD' }).then(function(r){
     if (r.ok){
       msg.className='msg ok'; msg.textContent='Scheda trovata, download in corso...';
@@ -183,10 +183,10 @@ function uploadScheda(){
   var file = fileInput.files[0];
   msg.className = 'msg'; msg.textContent = '';
   if (!slug){ msg.className='msg err'; msg.textContent='Inserisci il nome dell\'atleta.'; return; }
-  if (!file){ msg.className='msg err'; msg.textContent='Scegli un file PDF.'; return; }
+  if (!file){ msg.className='msg err'; msg.textContent='Scegli un file .workout.'; return; }
 
   btn.disabled = true; msg.textContent = 'Caricamento...';
-  var path = 'web/schede/' + slug + '.pdf';
+  var path = 'web/schede/' + slug + '.workout';
   var reader = new FileReader();
   reader.onload = function(){
     var b64 = reader.result.split(',')[1];
@@ -232,11 +232,11 @@ function loadSchedeList(){
     headers: { 'Authorization': 'token ' + GITHUB_TOKEN }
   }).then(function(r){ return r.ok ? r.json() : []; })
     .then(function(items){
-      (items || []).filter(function(f){ return /\.pdf$/i.test(f.name); }).forEach(function(f){
+      (items || []).filter(function(f){ return /\.workout$/i.test(f.name); }).forEach(function(f){
         var row = document.createElement('div');
         row.className = 'row-item';
         var span = document.createElement('span');
-        span.textContent = f.name.replace(/\.pdf$/i, '');
+        span.textContent = f.name.replace(/\.workout$/i, '');
         var del = document.createElement('button');
         del.textContent = 'Elimina';
         del.onclick = function(){ deleteScheda(f.path, f.sha); };

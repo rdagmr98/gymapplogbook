@@ -140,21 +140,27 @@ function downloadApk(){
     });
 }
 
-// --- Download scheda per nome ---
+// --- Download scheda per nome (poi cancellata: scaricabile una sola volta) ---
 function downloadScheda(){
   var name = document.getElementById('athleteName').value;
   var msg = document.getElementById('athleteMsg');
   msg.className = 'msg'; msg.textContent = '';
   var slug = slugify(name);
   if (!slug){ msg.className='msg err'; msg.textContent='Inserisci il tuo nome.'; return; }
-  var url = 'schede/' + slug + '.workout';
-  fetch(url, { method: 'HEAD' }).then(function(r){
-    if (r.ok){
-      msg.className='msg ok'; msg.textContent='Scheda trovata, download in corso...';
-      location.href = url;
-    } else {
-      msg.className='msg err'; msg.textContent='Nessuna scheda trovata con questo nome. Scrivi nome e cognome come te li ha dati il trainer.';
-    }
+  var pagesUrl = 'schede/' + slug + '.workout';
+  var repoPath = 'web/schede/' + slug + '.workout';
+  fetch(pagesUrl).then(function(r){
+    if (!r.ok){ msg.className='msg err'; msg.textContent='Nessuna scheda trovata con questo nome. Scrivi nome e cognome come te li ha dati il trainer.'; return null; }
+    return r.blob();
+  }).then(function(blob){
+    if (!blob) return;
+    var objUrl = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = objUrl; a.download = slug + '.workout';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(objUrl);
+    msg.className='msg ok'; msg.textContent='Scheda scaricata.';
+    return ghGetSha(repoPath).then(function(sha){ if (sha) deleteScheda(repoPath, sha); });
   }).catch(function(){
     msg.className='msg err'; msg.textContent='Errore di rete, riprova.';
   });

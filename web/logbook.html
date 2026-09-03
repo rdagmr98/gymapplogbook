@@ -247,7 +247,7 @@ function loadSchedeList(){
         span.textContent = f.name.replace(/\.workout$/i, '');
         var del = document.createElement('button');
         del.textContent = 'Elimina';
-        del.onclick = function(){ deleteScheda(f.path, f.sha); };
+        del.onclick = function(){ row.remove(); deleteScheda(f.path, f.sha); };
         row.appendChild(span); row.appendChild(del);
         list.appendChild(row);
       });
@@ -259,7 +259,7 @@ function deleteScheda(path, sha){
     method: 'DELETE',
     headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github+json' },
     body: JSON.stringify({ message: 'rimuovi scheda: ' + path, sha: sha })
-  }).then(function(){ loadSchedeList(); });
+  });
 }
 </script>
 </body>

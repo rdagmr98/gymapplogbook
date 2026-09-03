@@ -109,9 +109,10 @@ body{min-height:100vh;display:flex;align-items:center;justify-content:center;tex
   </div>
 </div>
 
+<script src="gh-config.js"></script>
 <script>
 var REPO = 'rdagmr98/gymapplogbook';
-var GITHUB_TOKEN = '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'; // token fine-grained, solo Contents R/W su questo repo
+var GITHUB_TOKEN = (window.GH_CONFIG && window.GH_CONFIG.token) || ''; // iniettato a build-time dal workflow, mai committato
 
 function slugify(name){
   return name.normalize('NFD').replace(/[̀-ͯ]/g,'')

@@ -3,21 +3,49 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: "stable"
       - name: Install dependencies
         run: flutter pub get
+      - name: Inject GitHub upload token (never committed, artifact-only)
+        env:
+          LOGBOOK_UPLOAD_PAT: ${{ secrets.LOGBOOK_UPLOAD_PAT }}
+        run: |
+          python3 - <<'PY'
+          import os, json, pathlib
+          token = os.environ.get("LOGBOOK_UPLOAD_PAT", "")
+          pathlib.Path("web/gh-config.js").write_text(
+              "window.GH_CONFIG = { token: " + json.dumps(token) + " };\n",
+              encoding="utf-8",
+          )
+          PY
       - name: Build Web
         run: flutter build web --base-href "/gymapplogbook/" --release
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/web
+          path: build/web
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

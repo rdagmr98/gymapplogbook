@@ -42,9 +42,17 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Opt out of edge-to-edge: Flutter content above system nav bar.
+        WindowCompat.setDecorFitsSystemWindows(window, true)
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, true)
         handleWorkoutStartIntent(intent)
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        // Flutter embedding may re-enable edge-to-edge after resume — keep opt-out.
+        WindowCompat.setDecorFitsSystemWindows(window, true)
     }
 
     override fun onNewIntent(intent: Intent) {

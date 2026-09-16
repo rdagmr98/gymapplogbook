@@ -46,7 +46,8 @@ body{min-height:100vh;display:flex;align-items:center;justify-content:center;tex
   background:rgba(0,242,255,.14);color:#00F2FF;border:1px solid rgba(0,242,255,.3)}
 .btn.primary .tag{background:rgba(0,16,20,.18);color:#001014;border-color:rgba(0,16,20,.25)}
 .btn:disabled{opacity:.5;cursor:wait}
-.note{margin-top:22px;color:#6b727d;font-size:12.5px}
+.note{margin-top:14px;color:#6b727d;font-size:12.5px;line-height:1.45}
+.note.warn{color:#ffb020;border:1px solid rgba(255,176,32,.35);background:rgba(255,176,32,.08);padding:12px 14px;border-radius:12px;text-align:left}
 .sect{margin-top:34px;padding-top:26px;border-top:1px solid rgba(255,255,255,.08);text-align:left}
 .sect h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#9aa1ad;margin-bottom:14px;font-weight:700}
 .field{width:100%;padding:13px 15px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
@@ -81,7 +82,13 @@ body{min-height:100vh;display:flex;align-items:center;justify-content:center;tex
       <span class="tag">Gratis</span>
     </a>
   </div>
-  <div class="note">L'APK Android è sempre l'ultima versione pubblicata.</div>
+  <div class="note" style="color:#ffb020;max-width:100%">
+    <b>Se l'installazione fallisce («App non installata»):</b>
+    disinstalla prima Gym Logbook già presente sul telefono
+    (Impostazioni → App → Gym Logbook → Disinstalla),
+    poi reinstalla questo APK. Abilita anche «Origini sconosciute» per il browser/File.
+  </div>
+  <div class="note">L'APK Android è sempre l'ultima versione pubblicata (universale).</div>
 
   <!-- Scheda atleta -->
   <div class="sect">
@@ -121,7 +128,7 @@ function slugify(name){
     .replace(/^-+|-+$/g,'');
 }
 
-// --- Download APK (sempre ultima release) ---
+// --- Download APK (sempre ultima release, preferisci universale) ---
 function downloadApk(){
   var btn = document.getElementById('androidBtn');
   var sub = document.getElementById('androidSub');
@@ -129,8 +136,12 @@ function downloadApk(){
   fetch('https://api.github.com/repos/' + REPO + '/releases/latest')
     .then(function(r){ return r.json(); })
     .then(function(rel){
-      var asset = (rel.assets || []).find(function(a){ return /arm64.*\.apk$/i.test(a.name); })
-        || (rel.assets || []).find(function(a){ return /\.apk$/i.test(a.name); });
+      var assets = rel.assets || [];
+      var asset = assets.find(function(a){ return /^GymLogbook\.apk$/i.test(a.name); })
+        || assets.find(function(a){ return /universal/i.test(a.name) && /\.apk$/i.test(a.name); })
+        || assets.find(function(a){ return /GymLogbook/i.test(a.name) && /\.apk$/i.test(a.name) && !/arm64|armeabi|x86/i.test(a.name); })
+        || assets.find(function(a){ return /arm64.*\.apk$/i.test(a.name); })
+        || assets.find(function(a){ return /\.apk$/i.test(a.name); });
       if (!asset) throw new Error('no apk');
       sub.textContent = 'Android · ' + (rel.tag_name || 'APK');
       location.href = asset.browser_download_url;

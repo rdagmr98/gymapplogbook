@@ -32,6 +32,9 @@ android {
             storePassword = keyProps["storePassword"] as String
             keyAlias = keyProps["keyAlias"] as String
             keyPassword = keyProps["keyPassword"] as String
+            // max compatibility sideload (minSdk 24 already ok with v2-only, but some OEM installers want v1)
+            enableV1Signing = true
+            enableV2Signing = true
         }
     }
 

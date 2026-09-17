@@ -2472,6 +2472,140 @@ class _ClientMainPageState extends State<ClientMainPage>
     await _condividiProgressiFile(historyJson);
   }
 
+  /// Backup completo SharedPreferences (scheda + storico + streak + settings).
+  Future<void> _exportFullBackup() async {
+    final prefs = await SharedPreferences.getInstance();
+    final Map<String, dynamic> dump = {};
+    for (final key in prefs.getKeys()) {
+      final v = prefs.get(key);
+      if (v is bool) {
+        dump[key] = {'t': 'b', 'v': v};
+      } else if (v is int) {
+        dump[key] = {'t': 'i', 'v': v};
+      } else if (v is double) {
+        dump[key] = {'t': 'd', 'v': v};
+      } else if (v is List) {
+        dump[key] = {'t': 'sl', 'v': v.map((e) => e.toString()).toList()};
+      } else if (v != null) {
+        dump[key] = {'t': 's', 'v': v.toString()};
+      }
+    }
+    final contenutoFile = 'TIPO:BACKUP_GYM\n${jsonEncode(dump)}';
+    try {
+      final tempDir = await getTemporaryDirectory();
+      const fileName = 'gymlogbook_backup.gymbak';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(contenutoFile, flush: true);
+      await Clipboard.setData(ClipboardData(text: contenutoFile));
+      await _gymFileChannel.invokeMethod('shareFile', {
+        'path': file.path,
+        'name': fileName,
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Errore backup: $e")),
+        );
+      }
+    }
+  }
+
+  Future<void> _importaBackupDaFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final fileBytes = result.files.first.bytes;
+      final filePath = result.files.first.path;
+      String content;
+      if (fileBytes != null) {
+        content = utf8.decode(fileBytes);
+      } else if (filePath != null) {
+        content = await File(filePath).readAsString();
+      } else {
+        throw 'Impossibile leggere il file';
+      }
+      await _applicaBackupOProgressi(content);
+    } catch (e) {
+      if (mounted) _mostraErroreImportazione('Errore ripristino:\n$e');
+    }
+  }
+
+  Future<void> _applicaBackupOProgressi(String raw) async {
+    final content = raw.trim();
+    final prefs = await SharedPreferences.getInstance();
+
+    if (content.startsWith('TIPO:BACKUP_GYM')) {
+      final jsonStr = content.substring(content.indexOf('\n') + 1).trim();
+      final decoded = jsonDecode(jsonStr);
+      if (decoded is! Map) throw 'Backup non valido';
+      for (final entry in decoded.entries) {
+        final key = entry.key.toString();
+        final meta = entry.value;
+        if (meta is! Map) continue;
+        final t = meta['t']?.toString();
+        final v = meta['v'];
+        switch (t) {
+          case 'b':
+            await prefs.setBool(key, v == true);
+            break;
+          case 'i':
+            await prefs.setInt(key, (v as num).toInt());
+            break;
+          case 'd':
+            await prefs.setDouble(key, (v as num).toDouble());
+            break;
+          case 'sl':
+            if (v is List) {
+              await prefs.setStringList(
+                key,
+                v.map((e) => e.toString()).toList(),
+              );
+            }
+            break;
+          case 's':
+            await prefs.setString(key, v?.toString() ?? '');
+            break;
+        }
+      }
+    } else if (content.startsWith('TIPO:PROGRESSI_GYM')) {
+      final jsonStr = content.substring(content.indexOf('\n') + 1).trim();
+      final decoded = jsonDecode(jsonStr);
+      if (decoded is List) {
+        await prefs.setString('client_history', jsonEncode(decoded));
+      } else if (decoded is Map && decoded['logs'] is List) {
+        await prefs.setString('client_history', jsonEncode(decoded['logs']));
+        final name = decoded['clientName']?.toString();
+        if (name != null && name.trim().isNotEmpty) {
+          await prefs.setString('athlete_name', name.trim());
+        }
+      } else {
+        throw 'File progressi non valido';
+      }
+    } else {
+      throw 'File non riconosciuto.\nUsa .gymbak (backup) o .gymlog (progressi).';
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Dati ripristinati. Riavvio…'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    // ignore: use_build_context_synchronously
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthGuard()),
+      (_) => false,
+    );
+  }
+
   Future<void> _condividiProgressiFile(String historyJson) async {
     // Includi il nome atleta nell'envelope per l'auto-assegnazione nel PT
     final prefs = await SharedPreferences.getInstance();
@@ -2826,7 +2960,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                   child: Icon(Icons.send_rounded, color: accent, size: 20),
                 ),
                 title: Text(
-                  'Condividi scheda',
+                  'Esporta progressi',
                   style: TextStyle(
                     color: accent,
                     fontWeight: FontWeight.w600,
@@ -2834,7 +2968,63 @@ class _ClientMainPageState extends State<ClientMainPage>
                   ),
                 ),
                 subtitle: Text(
-                  'Invia la scheda al tuo allenatore o salvala',
+                  'File .gymlog per il coach o per ripristino storico',
+                  style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 4),
+              ListTile(
+                onTap: () {
+                  Navigator.pop(context);
+                  _exportFullBackup();
+                },
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: accent.withAlpha(30),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.backup_rounded, color: accent, size: 20),
+                ),
+                title: Text(
+                  'Backup completo',
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                subtitle: Text(
+                  'Salva scheda, storico, streak e impostazioni (.gymbak)',
+                  style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 4),
+              ListTile(
+                onTap: () {
+                  Navigator.pop(context);
+                  _importaBackupDaFile();
+                },
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: accent.withAlpha(30),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.restore_rounded, color: accent, size: 20),
+                ),
+                title: Text(
+                  'Ripristina backup',
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                subtitle: Text(
+                  'Apri un file .gymbak o .gymlog salvato in precedenza',
                   style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 12),
                 ),
               ),

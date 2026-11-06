@@ -5045,7 +5045,9 @@ class _WorkoutEngineState extends State<WorkoutEngine>
   int _newTimerRunId() => DateTime.now().microsecondsSinceEpoch;
   // ID univoco di questa sessione di allenamento (usato per separare
   // più sessioni nello stesso giorno nei grafici)
-  late final String _sessionId;
+  // Non final: alla ripresa di un allenamento interrotto torna l'id salvato nello snapshot,
+  // altrimenti lo storico si spezza in due sessioni (trend falsato).
+  late String _sessionId;
   bool _autoStartTimer = true;
   bool _confirmSeriesEnabled = true;
   bool _showWeightSuggestion = true;
@@ -5157,6 +5159,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         (k, v) => MapEntry(k.toString(), v),
       ),
       'allCompletedExercises': _allCompletedExercises,
+      'sessionId': _sessionId,
     };
     await prefs.setString(_inProgressKey, jsonEncode(snapshot));
   }
@@ -5192,6 +5195,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
 
       if (!mounted) return;
       setState(() {
+        if (snap['sessionId'] is String) _sessionId = snap['sessionId'] as String;
         exI = savedExI.clamp(0, widget.day.exercises.length - 1);
         setN = savedSetN;
         eserciziCompletati = savedCompleted;

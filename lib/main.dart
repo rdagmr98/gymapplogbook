@@ -2346,40 +2346,41 @@ class _ClientMainPageState extends State<ClientMainPage>
     final String historyString = prefs.getString('client_history') ?? "[]";
     final String carryoverString = prefs.getString('carryover_weights') ?? "{}";
 
-    setState(() {
-      try {
-        // Se la stringa è proprio vuota "", jsonDecode si rompe.
-        // Quindi controlliamo che non sia vuota prima di procedere.
-        if (routineString.trim().isNotEmpty && routineString != "null") {
-          myRoutine = (jsonDecode(routineString) as List)
-              .map((i) => WorkoutDay.fromJson(i))
-              .toList();
-        } else {
-          myRoutine = [];
-        }
-
-        if (historyString.trim().isNotEmpty && historyString != "null") {
-          history = jsonDecode(historyString);
-        } else {
-          history = [];
-        }
-
-        try {
-          if (carryoverString.trim().isNotEmpty && carryoverString != "null") {
-            final raw = jsonDecode(carryoverString) as Map<String, dynamic>;
-            _carryoverWeights = raw.map(
-              (k, v) => MapEntry(k, Map<String, dynamic>.from(v as Map)),
-            );
-          }
-        } catch (_) {
-          _carryoverWeights = {};
-        }
-      } catch (e) {
-        // Se c'è un errore nel formato, resettiamo a liste vuote invece di crashare
-        debugPrint("Errore nel caricamento dati: $e");
-        myRoutine = [];
-        history = [];
+    // Ogni chiave si decodifica da sola: prima un errore nella scheda azzerava
+    // anche lo storico in memoria e il primo allenamento salvato lo sovrascriveva.
+    bool usable(String s) => s.trim().isNotEmpty && s != "null";
+    List<WorkoutDay> routine = [];
+    List<dynamic> hist = [];
+    Map<String, Map<String, dynamic>> carry = {};
+    try {
+      if (usable(routineString)) {
+        routine = (jsonDecode(routineString) as List)
+            .map((i) => WorkoutDay.fromJson(i))
+            .toList();
       }
+    } catch (e) {
+      debugPrint("Errore nel caricamento scheda: $e");
+      await prefs.setString('client_routine_corrupt_backup', routineString);
+    }
+    try {
+      if (usable(historyString)) hist = jsonDecode(historyString) as List;
+    } catch (e) {
+      debugPrint("Errore nel caricamento storico: $e");
+      await prefs.setString('client_history_corrupt_backup', historyString);
+    }
+    try {
+      if (usable(carryoverString)) {
+        final raw = jsonDecode(carryoverString) as Map<String, dynamic>;
+        carry = raw.map(
+          (k, v) => MapEntry(k, Map<String, dynamic>.from(v as Map)),
+        );
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      myRoutine = routine;
+      history = hist;
+      _carryoverWeights = carry;
     });
     if (!kIsWeb) _updateWidgetData();
     if (!kIsWeb) _maybeStartWorkoutFromWidget();

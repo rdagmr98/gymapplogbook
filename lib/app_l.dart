@@ -166,8 +166,7 @@ class AppL {
     'chartLast': {'it': 'Ultima', 'en': 'Last', 'es': 'Última', 'pt': 'Última', 'fr': 'Dernière', 'de': 'Zuletzt', 'el': 'Τελευταία', 'ar': 'الأخيرة', 'pl': 'Ostatnia', 'ro': 'Ultima', 'hu': 'Utolsó'},
     'chartRecord': {'it': 'Record', 'en': 'Best', 'es': 'Récord', 'pt': 'Recorde', 'fr': 'Record', 'de': 'Bestwert', 'el': 'Ρεκόρ', 'ar': 'الأفضل', 'pl': 'Rekord', 'ro': 'Record', 'hu': 'Rekord'},
     'chartSinceStart': {'it': 'Dall\'inizio', 'en': 'Since start', 'es': 'Desde el inicio', 'pt': 'Desde o início', 'fr': 'Depuis le début', 'de': 'Seit Beginn', 'el': 'Από την αρχή', 'ar': 'منذ البداية', 'pl': 'Od początku', 'ro': 'De la început', 'hu': 'Kezdés óta'},
-    'chart1rm': {'it': '1RM stimato', 'en': 'Estimated 1RM', 'es': '1RM estimado', 'pt': '1RM estimado', 'fr': '1RM estimé', 'de': 'Geschätztes 1RM', 'el': 'Εκτιμώμενο 1RM', 'ar': '1RM المقدّر', 'pl': 'Szacowany 1RM', 'ro': '1RM estimat', 'hu': 'Becsült 1RM'},
-    'chartTopWeight': {'it': 'Peso massimo', 'en': 'Top weight', 'es': 'Peso máximo', 'pt': 'Peso máximo', 'fr': 'Charge max', 'de': 'Höchstgewicht', 'el': 'Μέγιστο βάρος', 'ar': 'أقصى وزن', 'pl': 'Maks. ciężar', 'ro': 'Greutate maximă', 'hu': 'Max. súly'},
+    'chartBestSet': {'it': 'Serie migliore', 'en': 'Best set', 'es': 'Mejor serie', 'pt': 'Melhor série', 'fr': 'Meilleure série', 'de': 'Bester Satz', 'el': 'Καλύτερο σετ', 'ar': 'أفضل مجموعة', 'pl': 'Najlepsza seria', 'ro': 'Cea mai bună serie', 'hu': 'Legjobb sorozat'},
     'weeklyVolume': {'it': 'Volume settimanale', 'en': 'Weekly volume', 'es': 'Volumen semanal', 'pt': 'Volume semanal', 'fr': 'Volume hebdomadaire', 'de': 'Wochenvolumen', 'el': 'Εβδομαδιαίος όγκος', 'ar': 'الحجم الأسبوعي', 'pl': 'Objętość tygodniowa', 'ro': 'Volum săptămânal', 'hu': 'Heti volumen'},
     'chartMaxReps': {'it': 'Ripetizioni max', 'en': 'Max reps', 'es': 'Reps máx.', 'pt': 'Reps máx.', 'fr': 'Reps max', 'de': 'Max. Wdh.', 'el': 'Μέγιστες επαναλήψεις', 'ar': 'أقصى تكرارات', 'pl': 'Maks. powtórzenia', 'ro': 'Repetări max.', 'hu': 'Max. ismétlés'},
     'noData': {'it': 'Nessun dato', 'en': 'No data', 'es': 'Sin datos', 'pt': 'Sem dados', 'fr': 'Pas de données', 'de': 'Keine Daten', 'el': 'Δεν υπάρχουν δεδομένα', 'ar': 'لا توجد بيانات', 'pl': 'Brak danych', 'ro': 'Nu există date', 'hu': 'Nincs adat'},
@@ -471,8 +470,7 @@ class AppL {
   static String get chartLast => _t('chartLast');
   static String get chartRecord => _t('chartRecord');
   static String get chartSinceStart => _t('chartSinceStart');
-  static String get chart1rm => _t('chart1rm');
-  static String get chartTopWeight => _t('chartTopWeight');
+  static String get chartBestSet => _t('chartBestSet');
   static String get chartMaxReps => _t('chartMaxReps');
   static String get weeklyVolume => _t('weeklyVolume');
   static String get noData => _t('noData');

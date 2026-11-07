@@ -52,3 +52,21 @@ bool inWorkout(Object? h, String dayName, Set<String> exerciseNames) {
   final dn = h['dayName'];
   return dn is String ? dn.trim().toLowerCase() == dayName.trim().toLowerCase() : exerciseNames.contains(h['exercise']);
 }
+
+/// Punteggio di una serie per dire quale prestazione è migliore: il peso conta più delle reps,
+/// che decidono a parità di peso. 230×8 batte 220×10: è il salto della doppia progressione.
+/// A corpo libero (peso 0) contano le reps.
+// ponytail: reps = 1/300 del peso (come il coach), regge salti ≥2,5 kg fino a ~380 kg; alzare 300 per i micro-dischi.
+double setScore(num w, num r) => w > 0 ? w * (1 + r / 300) : r.toDouble();
+
+/// Serie migliore secondo [setScore] tra voci `{'w':…, 'r':…}` dello storico; null se non ce ne sono.
+({double w, int r, double score})? bestSet(Iterable? series) {
+  ({double w, int r, double score})? best;
+  for (final s in series ?? const []) {
+    if (s is! Map) continue;
+    final w = ((s['w'] ?? 0) as num).toDouble(), r = ((s['r'] ?? 0) as num).toInt();
+    final sc = setScore(w, r);
+    if (best == null || sc > best.score) best = (w: w, r: r, score: sc);
+  }
+  return best;
+}

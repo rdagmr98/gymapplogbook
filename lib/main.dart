@@ -2859,16 +2859,9 @@ class _ClientMainPageState extends State<ClientMainPage>
       if (exName.isEmpty) continue;
       sessionDate.putIfAbsent(sid, () => (h['date'] as String?) ?? '');
       sessionDayName.putIfAbsent(sid, () => (h['dayName'] as String?) ?? '');
-      final series = (h['series'] as List?) ?? [];
-      double maxEst1RM = 0;
-      for (final s in series) {
-        final w = (s['w'] ?? 0.0).toDouble();
-        final r = (s['r'] ?? 0).toDouble();
-        final est1RM = r > 0 ? w * (1 + r / (30.0 + w / 10.0)) : w;
-        if (est1RM > maxEst1RM) maxEst1RM = est1RM;
-      }
+      final best = bestSet(h['series'] as List?)?.score ?? 0; // il peso conta più delle reps
       final exMap = bySessionEx.putIfAbsent(sid, () => {});
-      if ((exMap[exName] ?? 0) < maxEst1RM) exMap[exName] = maxEst1RM;
+      if ((exMap[exName] ?? 0) < best) exMap[exName] = best;
     }
     final List<_SessionPoint> points = [];
     for (final sid in bySessionEx.keys) {
@@ -5089,29 +5082,13 @@ class _WorkoutEngineState extends State<WorkoutEngine>
       final prevSeries = _previousResults[name];
       if (prevSeries == null || prevSeries.isEmpty || currSeries.isEmpty)
         continue;
-      final prevAvgW =
-          prevSeries
-              .map((s) => (s['w'] as num).toDouble())
-              .reduce((a, b) => a + b) /
-          prevSeries.length;
-      final prevAvgR =
-          prevSeries
-              .map((s) => (s['r'] as num).toDouble())
-              .reduce((a, b) => a + b) /
-          prevSeries.length;
-      final currAvgW =
-          currSeries
-              .map((s) => (s['w'] as num).toDouble())
-              .reduce((a, b) => a + b) /
-          currSeries.length;
-      final currAvgR =
-          currSeries
-              .map((s) => (s['r'] as num).toDouble())
-              .reduce((a, b) => a + b) /
-          currSeries.length;
-      if (currAvgW > prevAvgW + 0.05 || currAvgR > prevAvgR + 0.05)
+      // media di setScore: il peso conta più delle reps (230×8 batte 220×10)
+      double avg(List series) =>
+          series.map((s) => setScore(s['w'] as num, s['r'] as num)).reduce((a, b) => a + b) / series.length;
+      final d = avg(currSeries) - avg(prevSeries);
+      if (d > 0.01)
         improved++;
-      else if (currAvgW < prevAvgW - 0.05 && currAvgR < prevAvgR - 0.05)
+      else if (d < -0.01)
         regressed++;
     }
     return improved - regressed;
@@ -5172,23 +5149,15 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                         final int pr = (ps['r'] as num).toInt();
                         final dW = w - pw;
                         final dR = r - pr;
-                        if (dW > 0.05 || dR > 0) {
-                          serieColor = Colors.greenAccent;
-                          if (dW > 0.05 && dR > 0)
-                            compareStr =
-                                ' (+${dW.toStringAsFixed(1)}kg, +$dR reps)';
-                          else if (dW > 0.05)
-                            compareStr = ' (+${dW.toStringAsFixed(1)}kg)';
-                          else
-                            compareStr = ' (+$dR reps)';
-                        } else if (dW < -0.05 && dR < 0) {
-                          serieColor = Colors.redAccent;
-                          compareStr =
-                              ' (${dW.toStringAsFixed(1)}kg, ${dR}reps)';
-                        } else {
-                          serieColor = Colors.white60;
-                          compareStr = ' (=)';
-                        }
+                        final dS = setScore(w, r) - setScore(pw, pr); // il peso conta più delle reps
+                        final parts = [
+                          if (dW.abs() > 0.05) '${dW > 0 ? '+' : ''}${dW.toStringAsFixed(1)}kg',
+                          if (dR != 0) '${dR > 0 ? '+' : ''}$dR reps',
+                        ];
+                        serieColor = dS > 0.01
+                            ? Colors.greenAccent
+                            : (dS < -0.01 ? Colors.redAccent : Colors.white60);
+                        compareStr = parts.isEmpty ? ' (=)' : ' (${parts.join(', ')})';
                       } else if (prevSeries == null) {
                         serieColor = Colors.white54;
                       }
@@ -5537,23 +5506,8 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         final currSeries = (ex['series'] as List);
         final prevSeries = _previousResults[ex['exercise']] ?? [];
         if (currSeries.isEmpty || prevSeries.isEmpty) continue;
-        double bestCW = 0, bestCR = 0;
-        for (final s in currSeries) {
-          final w = (s['w'] ?? 0.0).toDouble();
-          final r = (s['r'] ?? 0.0).toDouble();
-          if (w > bestCW) { bestCW = w; bestCR = r; }
-        }
-        double bestPW = 0, bestPR = 0;
-        for (final s in prevSeries) {
-          final w = (s['w'] ?? 0.0).toDouble();
-          final r = (s['r'] ?? 0.0).toDouble();
-          if (w > bestPW) { bestPW = w; bestPR = r; }
-        }
-        final weightUp = bestCW > bestPW;
-        final effCR = weightUp ? (bestCR < bestPR ? bestCR : bestPR) : bestCR;
-        final effPR = weightUp ? (bestPR < bestCR ? bestPR : bestCR) : bestPR;
-        final ec = effCR > 0 ? bestCW * (1 + effCR / (30.0 + bestCW / 10.0)) : bestCW;
-        final ep = effPR > 0 ? bestPW * (1 + effPR / (30.0 + bestPW / 10.0)) : bestPW;
+        final ec = bestSet(currSeries)!.score;
+        final ep = bestSet(prevSeries)!.score;
         if (ep > 0) {
           totalDelta += (ec - ep) / ep;
           matchCount++;
@@ -8747,9 +8701,6 @@ class _PTGraphWidgetState extends State<PTGraphWidget> {
     super.dispose();
   }
 
-  // Epley: con 1 rep il 1RM è il peso stesso
-  static double _e1rm(double w, double r) => r <= 1 ? w : w * (1 + r / 30);
-
   static String _fmt(double v) {
     final s = v.toStringAsFixed(v >= 100 ? 0 : 1);
     return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
@@ -8777,28 +8728,24 @@ class _PTGraphWidgetState extends State<PTGraphWidget> {
     final allBodyweight = logs.every((l) => (l['series'] as List)
         .every((s) => ((s['w'] ?? 0) as num) <= 0));
     final unit = allBodyweight ? 'reps' : (widget.usePounds ? 'lb' : 'kg');
-    final values = <double>[]; // 1RM stimato (o reps max a corpo libero)
-    final tops = <double>[]; // peso massimo sollevato
+    final values = <double>[]; // punteggio della serie migliore (setScore: conta il peso, poi le reps)
+    final bests = <String>[]; // la serie migliore, "230 kg × 8"
     final dates = <DateTime?>[];
     for (final l in logs) {
-      double best = 0, top = 0;
-      for (final s in l['series'] as List) {
-        final w = ((s['w'] ?? 0) as num).toDouble();
-        final r = ((s['r'] ?? 0) as num).toDouble();
-        final v = allBodyweight ? r : conv(_e1rm(w, r));
-        if (v > best) best = v;
-        if (conv(w) > top) top = conv(w);
-      }
-      values.add(best);
-      tops.add(top);
+      final b = bestSet(l['series'] as List)!;
+      values.add(allBodyweight ? b.score : conv(b.score));
+      bests.add(allBodyweight ? '${b.r} $unit' : '${_fmt(conv(b.w))} $unit × ${b.r}');
       dates.add(DateTime.tryParse(l['date']?.toString() ?? ''));
     }
     final n = values.length;
     final sel = (_sel ?? n - 1).clamp(0, n - 1);
-    final record = values.reduce((a, b) => a > b ? a : b);
+    var recordI = 0;
+    for (var i = 1; i < n; i++) {
+      if (values[i] > values[recordI]) recordI = i;
+    }
     final delta = values.first > 0 ? (values.last - values.first) / values.first * 100 : 0.0;
-    var lo = [...values, if (!allBodyweight) ...tops].reduce((a, b) => a < b ? a : b);
-    var hi = [...values, if (!allBodyweight) ...tops].reduce((a, b) => a > b ? a : b);
+    var lo = values.reduce((a, b) => a < b ? a : b);
+    var hi = values.reduce((a, b) => a > b ? a : b);
     final span = (hi - lo).abs() < 1 ? 1.0 : hi - lo;
     lo = (lo - span * 0.15).clamp(0.0, double.infinity);
     hi = hi + span * 0.15;
@@ -8842,9 +8789,9 @@ class _PTGraphWidgetState extends State<PTGraphWidget> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(children: [
-          stat(AppL.chartLast, '${_fmt(values.last)} $unit'),
+          stat(AppL.chartLast, bests.last),
           const SizedBox(width: 8),
-          stat(AppL.chartRecord, '${_fmt(record)} $unit', color: accent),
+          stat(AppL.chartRecord, bests[recordI], color: accent),
           const SizedBox(width: 8),
           stat(
             AppL.chartSinceStart,
@@ -8878,7 +8825,7 @@ class _PTGraphWidgetState extends State<PTGraphWidget> {
                 onSel: (i) => setState(() => _sel = i),
                 painter: PTChartPainter(
                   values: values,
-                  tops: allBodyweight ? const [] : tops,
+                  tops: const [],
                   dates: dates,
                   lo: lo,
                   hi: hi,
@@ -8894,13 +8841,7 @@ class _PTGraphWidgetState extends State<PTGraphWidget> {
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Container(width: 14, height: 3, color: accent),
           const SizedBox(width: 6),
-          Text(allBodyweight ? AppL.chartMaxReps : AppL.chart1rm, style: TextStyle(color: muted, fontSize: 11)),
-          if (!allBodyweight) ...[
-            const SizedBox(width: 16),
-            Container(width: 14, height: 2, color: muted),
-            const SizedBox(width: 6),
-            Text(AppL.chartTopWeight, style: TextStyle(color: muted, fontSize: 11)),
-          ],
+          Text(allBodyweight ? AppL.chartMaxReps : AppL.chartBestSet, style: TextStyle(color: muted, fontSize: 11)),
         ]),
         const SizedBox(height: 14),
         Container(
@@ -8916,7 +8857,7 @@ class _PTGraphWidgetState extends State<PTGraphWidget> {
                 style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: 13),
               ),
               const Spacer(),
-              Text('${_fmt(values[sel])} $unit',
+              Text(bests[sel],
                   style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 13)),
             ]),
             const SizedBox(height: 6),
@@ -9843,24 +9784,17 @@ class _OverallProgressPageState extends State<_OverallProgressPage> {
       sessionDate.putIfAbsent(sid, () => (h['date'] as String?) ?? '');
       sessionDayName.putIfAbsent(sid, () => (h['dayName'] as String?) ?? '');
 
-      // Compute max estimated 1RM for this exercise in this session
-      final series = (h['series'] as List?) ?? [];
-      double maxEst1RM = 0;
-      for (final s in series) {
-        final w = (s['w'] ?? 0.0).toDouble();
-        final r = (s['r'] ?? 0).toDouble();
-        final est1RM = r > 0 ? w * (1 + r / (30.0 + w / 10.0)) : w;
-        if (est1RM > maxEst1RM) maxEst1RM = est1RM;
-      }
+      // serie migliore di questo esercizio nella sessione (setScore: conta il peso, poi le reps)
+      final best = bestSet(h['series'] as List?)?.score ?? 0;
       final exMap = bySessionEx.putIfAbsent(sid, () => {});
-      if ((exMap[exName] ?? 0) < maxEst1RM) exMap[exName] = maxEst1RM;
+      if ((exMap[exName] ?? 0) < best) exMap[exName] = best;
     }
 
     final List<_SessionPoint> points = [];
     for (final sid in bySessionEx.keys) {
       final date = sessionDate[sid] ?? '';
       if (date.isEmpty) continue;
-      // Score = sum of max estimated 1RM across all exercises in the session
+      // Score = somma delle serie migliori di ogni esercizio della sessione
       final score = bySessionEx[sid]!.values.fold(0.0, (a, b) => a + b);
       points.add(_SessionPoint(
         sessionId: sid,
@@ -9942,32 +9876,23 @@ class _OverallProgressPageState extends State<_OverallProgressPage> {
   }
 
   List<_ExTrend> _exerciseTrends() {
-    final byEx = <String, List<(DateTime, double, double)>>{};
+    final byEx = <String, List<(DateTime, ({double w, int r, double score}))>>{};
     for (final h in widget.history) {
       if (h is! Map) continue;
       if (_filterDay != null && h['dayName'] != _filterDay) continue;
       final name = (h['exercise'] as String?) ?? '';
-      final series = (h['series'] as List?) ?? const [];
-      if (name.isEmpty || series.isEmpty) continue;
-      double best = 0, reps = 0;
-      for (final s in series) {
-        final w = ((s['w'] ?? 0) as num).toDouble();
-        final r = ((s['r'] ?? 0) as num).toDouble();
-        final e = _PTGraphWidgetState._e1rm(w, r);
-        if (e > best) best = e;
-        if (r > reps) reps = r;
-      }
+      final best = bestSet(h['series'] as List?);
+      if (name.isEmpty || best == null) continue;
       byEx
           .putIfAbsent(name, () => [])
-          .add((DateTime.tryParse('${h['date']}') ?? DateTime(2000), best, reps));
+          .add((DateTime.tryParse('${h['date']}') ?? DateTime(2000), best));
     }
     final out = <_ExTrend>[];
     byEx.forEach((name, l) {
       l.sort((a, b) => a.$1.compareTo(b.$1));
-      final bw = l.every((e) => e.$2 <= 0);
-      final v = l.map((e) => bw ? e.$3 : e.$2).toList();
+      final v = l.map((e) => e.$2.score).toList();
       final delta = v.length >= 2 && v.first > 0 ? (v.last - v.first) / v.first * 100 : 0.0;
-      out.add(_ExTrend(name, v, delta, bw));
+      out.add(_ExTrend(name, v, delta, l.every((e) => e.$2.w <= 0), l.last.$2.w, l.last.$2.r));
     });
     // prima chi migliora di più; chi ha una sola sessione in fondo
     double key(_ExTrend t) => t.values.length < 2 ? -1e9 : t.delta;
@@ -10202,8 +10127,8 @@ class _OverallProgressPageState extends State<_OverallProgressPage> {
                       const SizedBox(height: 2),
                       Text(
                         t.bodyweight
-                            ? '${_PTGraphWidgetState._fmt(t.values.last)} reps'
-                            : '1RM ${_PTGraphWidgetState._fmt(widget.usePounds ? kgToLb(t.values.last) : t.values.last)} $unit',
+                            ? '${t.lastR} reps'
+                            : '${_PTGraphWidgetState._fmt(widget.usePounds ? kgToLb(t.lastW) : t.lastW)} $unit × ${t.lastR}',
                         style: TextStyle(color: muted, fontSize: 12),
                       ),
                     ],
@@ -11344,10 +11269,12 @@ class _SparkPainter extends CustomPainter {
 
 class _ExTrend {
   final String name;
-  final List<double> values; // 1RM stimato per sessione (reps max a corpo libero)
+  final List<double> values; // punteggio della serie migliore per sessione (setScore)
   final double delta; // % dalla prima all'ultima sessione
   final bool bodyweight;
-  const _ExTrend(this.name, this.values, this.delta, this.bodyweight);
+  final double lastW; // serie migliore dell'ultima sessione
+  final int lastR;
+  const _ExTrend(this.name, this.values, this.delta, this.bodyweight, this.lastW, this.lastR);
 }
 
 const _kUp = Color(0xFF4CD97B);

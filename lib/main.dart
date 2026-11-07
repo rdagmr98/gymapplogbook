@@ -3012,11 +3012,13 @@ class _ClientMainPageState extends State<ClientMainPage>
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
-                child: _WorkoutProgressChart(
-                  day: day,
-                  history: history,
-                  accent: accent,
-                  usePounds: _stUsePounds,
+                child: SingleChildScrollView(
+                  child: _WorkoutProgressChart(
+                    day: day,
+                    history: history,
+                    accent: accent,
+                    usePounds: _stUsePounds,
+                  ),
                 ),
               ),
             ),
@@ -8549,7 +8551,7 @@ class _WorkoutProgressChartState extends State<_WorkoutProgressChart> {
     final date = <String, DateTime?>{};
     final best = <String, Map<String, String>>{};
     for (final h in widget.history) {
-      if (h is! Map || !names.contains(h['exercise'])) continue;
+      if (h is! Map || !inWorkout(h, widget.day.dayName, names)) continue;
       final raw = h['date']?.toString() ?? '';
       if (raw.length < 10) continue;
       final sid = h['session_id']?.toString() ?? '';

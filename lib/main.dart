@@ -3783,20 +3783,8 @@ class _ClientMainPageState extends State<ClientMainPage>
     return Column(children: items);
   }
 
-  DateTime? _lastTrainedDate(WorkoutDay day) {
-    DateTime? latest;
-    for (final ex in day.exercises) {
-      for (final h in history) {
-        if ((h as Map)['exercise'] == ex.name) {
-          try {
-            final d = DateTime.parse(h['date'] as String);
-            if (latest == null || d.isAfter(latest)) latest = d;
-          } catch (_) {}
-        }
-      }
-    }
-    return latest;
-  }
+  DateTime? _lastTrainedDate(WorkoutDay day) =>
+      lastTrainedDate(history, day.dayName, day.exercises.map((e) => e.name));
 
   /// Workout completed furthest in the past (never done = oldest).
   String? _suggestedWorkoutName() {

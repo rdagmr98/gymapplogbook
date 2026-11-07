@@ -31,3 +31,20 @@ ProgressionPlan progressionPlan({
     provaReps: !raised && !aumento && lastReps >= target ? lastReps + 1 : null,
   );
 }
+
+/// Ultima volta che è stato fatto l'allenamento [dayName]: conta la sessione intera (campo `dayName`
+/// delle voci di storico), non i singoli esercizi, così un esercizio in comune tra due allenamenti
+/// non sposta il suggerimento. Voci vecchie senza `dayName`: ripiego sul nome esercizio.
+DateTime? lastTrainedDate(Iterable history, String dayName, Iterable<String> exerciseNames) {
+  final key = dayName.trim().toLowerCase();
+  final names = exerciseNames.toSet();
+  DateTime? latest;
+  for (final h in history) {
+    if (h is! Map) continue;
+    final dn = h['dayName'];
+    final match = dn is String ? dn.trim().toLowerCase() == key : names.contains(h['exercise']);
+    final d = match ? DateTime.tryParse('${h['date']}') : null;
+    if (d != null && (latest == null || d.isAfter(latest))) latest = d;
+  }
+  return latest;
+}

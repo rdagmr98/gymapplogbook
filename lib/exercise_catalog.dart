@@ -76,6 +76,34 @@ ExerciseInfo? findExercise(String name) {
   return null;
 }
 
+final RegExp _kOtherEquipmentKeywords = RegExp(
+  r'\b(cable|machine|kettlebell|band|smith|ez[ -]?bar|trap bar|hex bar|plate|medicine ball|stability ball|swiss ball|bosu|trx|suspension|sled|landmine|leverage|weighted|pulley)\b',
+  caseSensitive: false,
+);
+
+final RegExp _kBodyweightKeywords = RegExp(
+  r'\b(push[ -]?up|pull[ -]?up|chin[ -]?up|sit[ -]?up|v[ -]?up|l[ -]?sit|plank|burpee|crunch|mountain climber|jumping jack|jump rope|box jump|broad jump|bear crawl|superman|bodyweight|air squat|pistol squat|glute bridge|wall sit|side plank|flutter kick|leg raise|hollow hold|inchworm|high knees|star jump|dip)\b',
+  caseSensitive: false,
+);
+
+/// Classifica l'attrezzo necessario in base al nome esercizio: 'corpo_libero',
+/// 'manubri', 'bilanciere', oppure null (attrezzo diverso o non riconoscibile
+/// dal nome, es. cavi/macchinari/kettlebell/esercizi generici senza attrezzo
+/// citato esplicitamente).
+/// ponytail: euristica su name/nameEn, nessun campo equipment nei dati sorgente
+/// (ExerciseDB lo aveva ma non è stato portato nel catalogo generato). Il
+/// default per gli esercizi non riconosciuti è null (non filtrabile) e non
+/// 'corpo_libero', per non mostrare esercizi con manubri/bilanciere sotto il
+/// filtro "corpo libero" solo perché il nome non li cita esplicitamente.
+String? exerciseEquipment(ExerciseInfo e) {
+  final text = '${e.name} ${e.nameEn}'.toLowerCase();
+  if (text.contains('dumbbell')) return 'manubri';
+  if (text.contains('barbell')) return 'bilanciere';
+  if (_kOtherEquipmentKeywords.hasMatch(text)) return null;
+  if (_kBodyweightKeywords.hasMatch(text)) return 'corpo_libero';
+  return null;
+}
+
 const List<ExerciseInfo> kExerciseCatalog = [
   // ── PETTO ──
   ExerciseInfo(
@@ -124,13 +152,14 @@ const List<ExerciseInfo> kExerciseCatalog = [
     name: 'Panca Inclinata',
     nameEn: 'Incline Bench Press',
     category: 'petto',
-    muscleImages: ['petto.png'],
+    muscleImages: ['petto.png', 'tricipiti.png'],
     primaryMuscle: 'Petto superiore (clavicolare)',
     secondaryMuscles: 'Tricipiti, Deltoidi anteriori',
     execution:
         'Panca inclinata a 30-45°. Stessa tecnica della panca piana, ma l\'angolo sposta il carico sulla parte alta del petto.',
     tips:
         'Non superare i 45° di inclinazione per evitare di coinvolgere troppo le spalle.',
+    aliases: ['Panca inclinata', 'Incline bench press', 'Incline bench', 'Panca alzata'],
     gifFilename: 'incline-barbell-bench-press',
   ),
   ExerciseInfo(
@@ -144,6 +173,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Sdraiato, braccia tese con manubri sopra il petto. Abbassa lentamente le braccia ad arco fino a sentire lo stretching, poi riporta in posizione.',
     tips:
         'Mantieni una leggera flessione al gomito per proteggere l\'articolazione.',
+    aliases: ['Croci', 'Fly', 'Dumbbell fly', 'Croci manubri', 'Pectoral fly'],
     gifFilename: 'dumbbell-fly',
   ),
   ExerciseInfo(
@@ -156,6 +186,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
     execution:
         'Posizione plank con le mani leggermente più larghe delle spalle. Abbassa il corpo mantenendo il core attivo e il corpo in linea retta. Spingi verso il basso esplosivamente.',
     tips: 'Evita di far cadere i fianchi o di alzare il sedere.',
+    aliases: ['Flessioni', 'Piegamenti', 'Pushup'],
     gifFilename: 'push-up',
   ),
   ExerciseInfo(
@@ -169,6 +200,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Inclinati leggermente in avanti per enfatizzare il petto. Scendi fino a quando i gomiti sono a 90°, poi spingi su.',
     tips:
         'Più sei inclinato in avanti, più lavora il petto. Più sei dritto, più lavorano i tricipiti.',
+    aliases: ['Dip', 'Parallele', 'Dips petto'],
     gifFilename: 'triceps-dips',
   ),
   // ── DORSO ──
@@ -231,12 +263,13 @@ const List<ExerciseInfo> kExerciseCatalog = [
     name: 'Rematore con Manubrio',
     nameEn: 'Dumbbell Row',
     category: 'dorso',
-    muscleImages: ['dorso.png'],
+    muscleImages: ['dorso.png', 'bicipiti.png'],
     primaryMuscle: 'Gran dorsale, Romboidi',
     secondaryMuscles: 'Bicipiti, Trapezio',
     execution:
         'Appoggia un ginocchio e una mano sulla panca. Con la mano libera, tira il manubrio verso il fianco retraendo la scapola. Abbassa lentamente.',
     tips: 'Non ruotare il busto. Mantieni la colonna neutra.',
+    aliases: ['Rematore manubrio', 'One arm row', 'Single arm row', 'Dumbbell row'],
     gifFilename: 'dumbbell-row',
   ),
   // ── SPALLE ──
@@ -277,6 +310,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
     execution:
         'In piedi, manubri davanti alle cosce. Alza le braccia in avanti fino all\'altezza delle spalle mantenendo i gomiti quasi tesi.',
     tips: 'Evita di usare il momentum del corpo oscillando.',
+    aliases: ['Alzate frontali', 'Front raise'],
     gifFilename: 'dumbbell-front-raise',
   ),
   ExerciseInfo(
@@ -290,6 +324,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Busto piegato a 90°, braccia verso il basso. Alza i manubri lateralmente fino all\'altezza delle spalle tenendo i gomiti leggermente flessi.',
     tips:
         'Focalizzati sul deltoide posteriore, non sul trapezio. Mantieni il collo neutro.',
+    aliases: ['Alzate posteriori', 'Rear delt fly', 'Butterfly posteriore'],
     gifFilename: 'bent-over-lateral-raise',
   ),
   // ── BICIPITI ──
@@ -316,6 +351,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
     execution:
         'In piedi, manubri ai lati. Alza un manubrio ruotando il polso (supinazione) durante il movimento. Abbassa e ripeti con l\'altro braccio.',
     tips: 'La supinazione del polso massimizza l\'attivazione del bicipite.',
+    aliases: ['Curl manubri', 'Dumbbell curl', 'Curl alternato'],
     gifFilename: 'dumbbell-curl',
   ),
   ExerciseInfo(
@@ -342,6 +378,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'In piedi davanti al cavo basso, barra o corda. Piega i gomiti portando il peso verso le spalle mantenendo i gomiti fissi.',
     tips:
         'Il cavo mantiene tensione costante anche nella posizione di massima contrazione.',
+    aliases: ['Curl cavo', 'Cable curl', 'Pulley curl'],
     gifFilename: 'cable-curl',
   ),
   // ── TRICIPITI ──
@@ -383,6 +420,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Alle parallele o con panca, busto dritto e verticale. Scendi flettendo i gomiti. Spingi su.',
     tips:
         'Più sei dritto, più lavora il tricipite. Inclinati in avanti per coinvolgere il petto.',
+    aliases: ['Dip tricipiti', 'Tricep dips', 'Bench dip'],
     gifFilename: 'triceps-dips',
   ),
   // ── GAMBE ──
@@ -465,7 +503,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'In piedi con bilanciere. Abbassa il bilanciere lungo le gambe flettendo i fianchi (non le ginocchia) finché senti lo stretch nei femorali. Spingi i fianchi in avanti per tornare su.',
     tips:
         'Schiena sempre neutra. Non piegarti con la schiena: il movimento parte dai fianchi.',
-    aliases: ['Stacchi rumeni', 'RDL'],
+    aliases: ['Stacco rumeno', 'Stacchi rumeni', 'RDL'],
     gifFilename: 'romanian-deadlift',
   ),
   ExerciseInfo(
@@ -679,6 +717,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Presa neutra (palmi contrapposti). Tira il corpo verso l\'alto fino al mento sopra la barra. Scendi lentamente con controllo.',
     tips:
         'La presa neutra riduce lo stress sui polsi ed è più naturale per molte persone rispetto alla presa prona.',
+    aliases: ['Trazioni neutre', 'Neutral grip pullup', 'Chin-up neutro'],
     gifFilename: 'neutral-grip-pull-up',
   ),
   ExerciseInfo(
@@ -692,6 +731,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Sulla macchina roman chair o GHD, fianchi sull\'imbottitura, piedi bloccati. Abbassa il busto verso il basso, poi estendi la schiena fino alla posizione neutra. Non iperestendere.',
     tips:
         'Esercizio fondamentale per il rafforzamento della schiena bassa. Aggiungi peso solo quando la tecnica è perfetta.',
+    aliases: ['Iperestensioni', 'Roman chair', 'Hyperextension', 'Hyperextensions'],
     gifFilename: 'hyperextension',
   ),
   ExerciseInfo(
@@ -784,6 +824,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Sul banco scott (preacher bench), braccia appoggiate sul cuscino inclinato. Porta il bilanciere o i manubri verso le spalle. Abbassa lentamente per massimo stretch.',
     tips:
         'Il banco scott elimina il cheating. Scendi fino alla quasi-estensione completa per il massimo range of motion.',
+    aliases: ['Preacher curl', 'Curl scott', 'Curl al banco'],
     gifFilename: 'dumbbell-scott-curl',
   ),
   ExerciseInfo(
@@ -797,6 +838,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'In piedi o seduto, manubrio o barra sopra la testa. Abbassa il peso dietro la testa flettendo solo i gomiti. Estendi le braccia verso l\'alto.',
     tips:
         'Il capo lungo del tricipite è più attivato quando le braccia sono sopra la testa. Tieni i gomiti vicini.',
+    aliases: ['Estensioni tricipiti', 'Tricep overhead', 'Estensione sopra testa'],
     gifFilename: 'seated-ez-bar-overhead-triceps-extension',
   ),
   // ── GAMBE/GLUTEI (extra) ──
@@ -837,6 +879,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Piede posteriore su una panca, piede anteriore avanti. Abbassa il ginocchio posteriore verso il suolo. Spingi con il piede anteriore per tornare su.',
     tips:
         'Esercizio unilaterale eccellente per correggere asimmetrie. Il busto leggermente inclinato in avanti attiva più i glutei.',
+    aliases: ['BSS', 'Split squat bulgaro', 'Split squat', 'Affondi bulgari'],
     gifFilename: 'barbell-bulgarian-split-squat',
   ),
   ExerciseInfo(

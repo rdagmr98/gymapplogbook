@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
+import 'app_l.dart';
 
-/// Tutorial interattivo per il primo workout.
-/// Se [demoWorkoutBuilder] è fornito, il tasto "Inizia la prova" avvia il
-/// vero WorkoutEngine in demoMode (senza salvare dati); al termine torna qui
-/// e viene chiamato [onComplete] per chiudere il tutorial.
+/// Tutorial corto: una pagina con i 3 concetti, poi la prova guidata
+/// (il riquadro che spiega ogni passo è in WorkoutEngine, demoMode).
 class WorkoutTutorial extends StatefulWidget {
   final Color accentColor;
   final VoidCallback onComplete;
-
-  /// Builder che restituisce il vero WorkoutEngine configurato in demoMode.
-  /// Fornito da main.dart per evitare l'import circolare.
-  final WidgetBuilder? demoWorkoutBuilder;
+  final Future<void> Function()? onStartDemo;
 
   const WorkoutTutorial({
     super.key,
     required this.accentColor,
     required this.onComplete,
-    this.demoWorkoutBuilder,
+    this.onStartDemo,
   });
 
   @override
@@ -24,210 +20,147 @@ class WorkoutTutorial extends StatefulWidget {
 }
 
 class _WorkoutTutorialState extends State<WorkoutTutorial> {
-  bool _launching = false;
+  bool _demoCompleted = false;
+  bool _loading = false;
 
-  Future<void> _startDemo(BuildContext ctx) async {
-    if (_launching) return;
-    setState(() => _launching = true);
-    if (widget.demoWorkoutBuilder != null) {
-      await Navigator.push<void>(
-        ctx,
-        MaterialPageRoute<void>(builder: widget.demoWorkoutBuilder!),
-      );
+  Future<void> _startDemo() async {
+    if (_loading) return;
+    if (widget.onStartDemo == null) {
+      widget.onComplete();
+      return;
     }
-    if (!mounted) return;
-    widget.onComplete();
+    setState(() => _loading = true);
+    await widget.onStartDemo!();
+    if (mounted) {
+      setState(() {
+        _loading = false;
+        _demoCompleted = true;
+      });
+    }
   }
+
+  bool get _dark => Theme.of(context).brightness == Brightness.dark;
+  Color get _bg => _dark ? const Color(0xFF0E0E10) : const Color(0xFFF2F2F7);
+  Color get _fg => _dark ? Colors.white : Colors.black87;
+  Color get _muted => _dark ? Colors.white60 : Colors.black54;
+  Color get _card => _dark ? const Color(0xFF1C1C1E) : Colors.white;
+
+  Widget _badge(Color accent, IconData icon, double size) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(shape: BoxShape.circle, color: accent.withAlpha(_dark ? 30 : 40)),
+    child: Icon(icon, color: accent, size: size * 0.48),
+  );
+
+  Widget _button(String label, VoidCallback? onPressed) => SizedBox(
+    width: double.infinity,
+    height: 54,
+    child: FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: widget.accentColor,
+        foregroundColor: Colors.black,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      onPressed: onPressed,
+      child: _loading
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+          : Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     final accent = widget.accentColor;
+    if (_demoCompleted) {
+      return Scaffold(
+        backgroundColor: _bg,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(children: [
+              Expanded(
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  _badge(accent, Icons.check_rounded, 112),
+                  const SizedBox(height: 32),
+                  Text(AppL.tutorialCompleteTitle,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: _fg, fontSize: 26, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 12),
+                  Text(AppL.tutorialCompleteBody,
+                      textAlign: TextAlign.center, style: TextStyle(color: _muted, fontSize: 15, height: 1.4)),
+                ]),
+              ),
+              _button(AppL.startRealWorkout, widget.onComplete),
+            ]),
+          ),
+        ),
+      );
+    }
+
+    final steps = [
+      (Icons.fitness_center_rounded, AppL.tutorialStep1Title, AppL.tutorialStep2Body),
+      (Icons.timer_outlined, AppL.tutorialStep3Title, AppL.tutorialStep3Body),
+      (Icons.history_rounded, AppL.tutorialMemoryTitle, AppL.tutorialMemoryBody),
+    ];
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: _bg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: widget.onComplete,
-                  child: const Text(
-                    'Salta',
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                ),
+        child: Column(children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+              child: TextButton(
+                onPressed: widget.onComplete,
+                child: Text(AppL.skip, style: TextStyle(color: _muted, fontSize: 14)),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Benvenuto in GymLogbook! 💪',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: accent,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                "Scopri come funziona l'app con un allenamento rapido a corpo libero.\n"
-                'Nessun dato verrà salvato — è solo una prova!',
-                style: TextStyle(color: Colors.white70, fontSize: 15),
-              ),
-              const SizedBox(height: 28),
-              // Workflow step-by-step guide
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(8),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withAlpha(20)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Come funziona ogni serie',
-                      style: TextStyle(
-                        color: accent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+              child: Column(children: [
+                _badge(accent, Icons.fitness_center_rounded, 88),
+                const SizedBox(height: 20),
+                Text(AppL.welcomeTitle,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: _fg, fontSize: 24, fontWeight: FontWeight.w800, height: 1.2)),
+                const SizedBox(height: 8),
+                Text(AppL.tutorialSubtitle,
+                    textAlign: TextAlign.center, style: TextStyle(color: _muted, fontSize: 15, height: 1.4)),
+                const SizedBox(height: 28),
+                for (int i = 0; i < steps.length; i++)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16)),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      _badge(accent, steps[i].$1, 44),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('${i + 1}. ${steps[i].$2}',
+                              style: TextStyle(color: _fg, fontWeight: FontWeight.w700, fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Text(steps[i].$3, style: TextStyle(color: _muted, fontSize: 13, height: 1.35)),
+                        ]),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _stepCompact(accent, '1', '💪 Esegui la serie', 'Prima il ferro! Fai le tue ripetizioni.'),
-                    const SizedBox(height: 8),
-                    _stepCompact(accent, '2', '📝 Registra peso e reps', 'Solo DOPO la serie, inserisci i valori e premi Conferma.'),
-                    const SizedBox(height: 8),
-                    _stepCompact(accent, '3', '⏱️ Timer automatico', 'Il recupero parte da solo in background.'),
-                    const SizedBox(height: 8),
-                    _stepCompact(accent, '4', '🔁 Prossima serie', 'A fine recupero l\'app ti avvisa. Ripeti!'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              _step(
-                accent,
-                Icons.navigate_next,
-                'Naviga tra gli esercizi',
-                'Usa le frecce in alto per passare da un esercizio all\'altro durante l\'allenamento.',
-              ),
-              const SizedBox(height: 16),
-              _step(
-                accent,
-                Icons.bar_chart,
-                'L\'app ricorda i tuoi pesi',
-                'La prossima volta che fai lo stesso esercizio, vedrai i pesi usati '
-                    'nell\'ultima sessione. GymLogbook tiene traccia di tutto.',
-              ),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _launching ? null : () => _startDemo(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accent,
-                    foregroundColor: Colors.black,
-                    disabledBackgroundColor: accent.withAlpha(120),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    ]),
                   ),
-                  child: _launching
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.black,
-                          ),
-                        )
-                      : const Text(
-                          'Inizia la prova 🏋️',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+              ]),
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(children: [
+              Text(AppL.tutorialDemoTitle,
+                  textAlign: TextAlign.center, style: TextStyle(color: _muted, fontSize: 13)),
+              const SizedBox(height: 12),
+              _button(AppL.tutorialStartDemo, _loading ? null : _startDemo),
+            ]),
+          ),
+        ]),
       ),
-    );
-  }
-
-  Widget _stepCompact(Color accent, String number, String title, String body) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: accent.withAlpha(40),
-            border: Border.all(color: accent.withAlpha(120)),
-          ),
-          child: Center(
-            child: Text(number, style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.bold)),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-              Text(body, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _step(Color accent, IconData icon, String title, String body) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: accent.withAlpha(30),
-            borderRadius: BorderRadius.circular(21),
-            border: Border.all(color: accent.withAlpha(90)),
-          ),
-          alignment: Alignment.center,
-          child: Icon(icon, color: accent, size: 22),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                body,
-                style: const TextStyle(color: Colors.white60, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

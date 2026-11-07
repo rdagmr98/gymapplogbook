@@ -1,4 +1,6 @@
 // Banca dati esercizi locali
+import 'gif_exercise_catalog.dart';
+
 class ExerciseInfo {
   final String name; // Nome (italiano o inglese)
   final String nameEn; // English name (for YouTube search)
@@ -215,7 +217,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Piedi a larghezza delle anche, bilanciere sopra la metà del piede. Presa prona o mista. Abbassa i fianchi, petto alto, schiena neutra. Spingi il pavimento verso il basso e porta i fianchi avanti simultaneamente.',
     tips:
         'Non arrotondare mai la schiena bassa. La barra deve sfiorare le gambe per tutta la salita.',
-    aliases: ['Stacchi', 'Deadlift'],
+    aliases: ['Stacchi', 'Stacco', 'Stacco da terra', 'Deadlift'],
     gifFilename: 'deadlift',
   ),
   ExerciseInfo(
@@ -392,7 +394,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
     execution:
         'Sdraiato, bilanciere o manubri sopra il petto. Abbassa lentamente verso la fronte flettendo solo i gomiti. Estendi le braccia.',
     tips: 'Controlla la discesa. Non allargare i gomiti.',
-    aliases: ['Pushdown barra', 'Skull crusher'],
+    aliases: ['Skull crusher', 'French press bilanciere', 'Estensioni tricipiti sdraiato'],
     gifFilename: 'seated-ez-bar-overhead-triceps-extension',
   ),
   ExerciseInfo(
@@ -406,7 +408,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'In piedi, cavo alto con corda o barra. Tieni i gomiti fissi ai fianchi. Estendi le braccia verso il basso fino a massima contrazione.',
     tips:
         'Ruota i polsi verso l\'esterno a fine movimento con la corda per massimizzare la contrazione.',
-    aliases: ['Pushdown corda', 'Pushdown', 'Tricep pushdown'],
+    aliases: ['Pushdown corda', 'Pushdown', 'Pushdown barra', 'Push down', 'Tricep pushdown'],
     gifFilename: 'rope-pushdown',
   ),
   ExerciseInfo(
@@ -449,7 +451,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Seduto nella macchina, piedi alla larghezza delle anche sulla piattaforma. Abbassa controllato fino a 90° ai ginocchi. Spingi via la piattaforma.',
     tips:
         'Non bloccare completamente le ginocchia in cima. Mantieni i piedi piatti sulla piattaforma.',
-    aliases: ['Leg press'],
+    aliases: ['Leg press', 'Pressa', 'Pressa 45'],
     gifFilename: 'leg-press',
   ),
   ExerciseInfo(
@@ -463,6 +465,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'In piedi, fai un passo avanti con una gamba. Abbassa il ginocchio posteriore verso il suolo. Torna alla posizione iniziale e ripeti con l\'altra gamba.',
     tips:
         'Il ginocchio anteriore non deve superare la punta del piede. Mantieni il busto dritto.',
+    aliases: ['Affondo', 'Lunge', 'Lunges', 'Affondi a corpo libero'],
     gifFilename: 'bodyweight-lunge',
   ),
   ExerciseInfo(
@@ -531,6 +534,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Al cavo basso con cavigliera. Spingi la gamba indietro contraendo il gluteo. Abbassa controllato.',
     tips:
         'Non iperestendere la schiena. Fai una pausa nella contrazione massima.',
+    aliases: ['Slanci', 'Slanci ai cavi', 'Kickback glutei', 'Calci glutei'],
     gifFilename: 'glute-kickback-machine',
   ),
   ExerciseInfo(
@@ -544,6 +548,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'In piedi sui bordi di un gradino o sulla macchina. Alza i talloni più in alto possibile. Abbassa lentamente fino al massimo stretch.',
     tips:
         'Fai una pausa in cima. Il range of motion completo è fondamentale per questo muscolo.',
+    aliases: ['Calf', 'Polpacci', 'Calf in piedi', 'Sollevamenti sulle punte'],
     gifFilename: 'calf-raise',
   ),
   // ── CORE ──
@@ -571,6 +576,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Sdraiato con ginocchia flesse. Mani dietro la testa. Curva il busto verso le ginocchia contraendo l\'addome. Abbassa lentamente.',
     tips:
         'Non tirare il collo con le mani. Il movimento è breve: solleva solo le spalle.',
+    aliases: ['Crunch a terra', 'Crunch addominali'],
     gifFilename: 'crunch',
   ),
   ExerciseInfo(
@@ -596,6 +602,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
     execution:
         'Appeso alla sbarra, gambe tese o piegate. Alza le gambe fino all\'orizzontale o oltre contraendo l\'addome. Abbassa lentamente.',
     tips: 'Evita di oscillare. Il movimento deve essere controllato.',
+    aliases: ['Alzate gambe', 'Sollevamento gambe', 'Leg raise alla sbarra', 'Hanging leg raise'],
     gifFilename: 'hanging-leg-raises',
   ),
   // ── MOVIMENTI COMPOSTI ──
@@ -662,6 +669,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Seduto nella macchina, avambracci sulle leve o mani sulle maniglie. Porta le braccia verso il centro contraendo il petto. Torna lentamente alla posizione di partenza.',
     tips:
         'Ottimo per l\'isolamento del petto. Non usare un peso eccessivo che ti costringa ad aprire troppo i gomiti.',
+    aliases: ['Butterfly', 'Pec deck', 'Croci alla macchina'],
     gifFilename: 'pec-deck-fly',
   ),
   ExerciseInfo(
@@ -675,6 +683,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Sdraiato sulla panca, manubrio con entrambe le mani sopra il petto. Abbassa il manubrio ad arco dietro la testa mantenendo i gomiti leggermente flessi. Riporta sopra il petto.',
     tips:
         'Ottimo per espandere la cassa toracica e allungare il grande pettorale. Vai lento nella fase eccentrica.',
+    aliases: ['Pullover', 'Pullover manubrio'],
     gifFilename: 'dumbbell-pullover',
   ),
   ExerciseInfo(
@@ -784,6 +793,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'In piedi con bilanciere o manubri. Alza le spalle più in alto possibile verso le orecchie. Mantieni un secondo, poi abbassa lentamente.',
     tips:
         'Non ruotare le spalle — il movimento deve essere verticale. Usa un peso gestibile per evitare problemi al collo.',
+    aliases: ['Scrollate', 'Scrollate di spalle', 'Shrug'],
     gifFilename: 'barbell-shrug',
   ),
   // ── BRACCIA (extra) ──
@@ -853,6 +863,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Seduto nella macchina, gambe appoggiate sulle leve. Apri le gambe verso l\'esterno contro la resistenza. Ritorna lentamente.',
     tips:
         'Essenziale per la stabilità del ginocchio e la definizione del gluteo laterale.',
+    aliases: ['Abductor machine', 'Abduttori', 'Abduttori macchina'],
     gifFilename: 'hip-abduction-machine',
   ),
   ExerciseInfo(
@@ -906,6 +917,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Stance larga, punte verso l\'esterno, presa stretta sulla barra. Abbassa i fianchi, petto alto. Spingi le ginocchia verso fuori mentre estendi le gambe. Fianchi e spalle salgono insieme.',
     tips:
         'La stance larga riduce il carico sulla schiena bassa. Attiva molto di più i glutei rispetto al deadlift convenzionale.',
+    aliases: ['Stacco sumo', 'Stacchi sumo'],
     gifFilename: 'sumo-deadlift',
   ),
   ExerciseInfo(
@@ -932,6 +944,7 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Sdraiato su un fianco, corpo in linea retta, appoggiato su un avambraccio e il bordo del piede. Alza i fianchi da terra e mantieni la posizione.',
     tips:
         'Non lasciare cadere i fianchi. Il corpo deve formare una linea retta dalla testa ai piedi.',
+    aliases: ['Side plank'],
   ),
   ExerciseInfo(
     name: 'Mountain Climber',
@@ -944,5 +957,267 @@ const List<ExerciseInfo> kExerciseCatalog = [
         'Posizione plank con braccia tese. Porta alternativamente le ginocchia verso il petto in modo rapido, come se stessi correndo in posizione orizzontale.',
     tips:
         'Mantieni i fianchi stabili e allineati. Più veloce è il movimento, più alto è l\'impatto cardiovascolare.',
+    aliases: ['Mountain climbers', 'Scalatore'],
+    gifFilename: 'mountain-climber',
   ),
 ];
+
+// ── RICERCA ESERCIZI ─────────────────────────────────────────────────────────
+// Unica ricerca per costruzione scheda, archivio e scelta GIF (gym_app e coach).
+// I nomi del catalogo GIF sono solo inglesi: le parole italiane passano da
+// kExerciseSynonyms. Ogni parola della query deve trovare riscontro; se una non
+// lo trova da nessuna parte restano le voci col massimo di parole trovate, così
+// un refuso non svuota la lista.
+
+/// Parola italiana (o grafia alternativa) → frammenti dei nomi inglesi.
+/// Si confronta per radice (vedi [_stem]): basta una forma, singolare o plurale.
+const Map<String, List<String>> kExerciseSynonyms = {
+  // attrezzi
+  'panca': ['bench'],
+  'manubrio': ['dumbbell'],
+  'bilanciere': ['barbell'],
+  'cavo': ['cable'],
+  'cavi': ['cable'],
+  'pulley': ['cable', 'row'],
+  'corda': ['rope'],
+  'macchina': ['machine', 'lever'],
+  'multipower': ['smith'],
+  'elastico': ['band'],
+  'palla': ['ball'],
+  'fitball': ['stability ball'],
+  'disco': ['plate'],
+  'sbarra': ['bar'],
+  'parallele': ['dip'],
+  'corpo': ['bodyweight'],
+  // varianti
+  'inclinata': ['incline'],
+  'declinata': ['decline'],
+  'seduto': ['seated'],
+  'piedi': ['standing'],
+  'sdraiato': ['lying'],
+  'prono': ['prone', 'lying'],
+  'inginocchiato': ['kneeling'],
+  'singolo': ['single', 'one'],
+  'unilaterale': ['single', 'one'],
+  'alternato': ['alternate', 'alternating'],
+  'inverso': ['reverse'],
+  'stretta': ['close'],
+  'larga': ['wide'],
+  'neutra': ['neutral', 'hammer'],
+  'martello': ['hammer'],
+  'frontale': ['front'],
+  'laterale': ['lateral', 'side'],
+  'posteriore': ['rear', 'reverse'],
+  'nuca': ['behind'],
+  'testa': ['overhead'],
+  'rumeno': ['romanian'],
+  'bulgaro': ['bulgarian'],
+  'tese': ['stiff'],
+  'scott': ['preacher'],
+  // movimenti
+  'distensione': ['press'],
+  'spinta': ['press', 'push'],
+  'lento': ['press'],
+  'military': ['shoulder press'],
+  'pressa': ['leg press'],
+  'croci': ['fly', 'crossover'],
+  'aperture': ['fly'],
+  'butterfly': ['pec deck', 'fly'],
+  'pectoral': ['pec', 'chest'],
+  'rematore': ['row'],
+  'tirata': ['pulldown', 'row', 'pull'],
+  'trazione': ['pull up', 'chin up'],
+  'stacco': ['deadlift'],
+  'affondo': ['lunge'],
+  'piegamento': ['push up'],
+  'flessione': ['push up'],
+  'alzata': ['raise'],
+  'sollevamento': ['raise', 'lift'],
+  'estensione': ['extension'],
+  'iperestensione': ['hyperextension'],
+  'french': ['skull', 'skullcrusher', 'lying triceps'],
+  'slanci': ['kickback', 'kick'],
+  'scrollata': ['shrug'],
+  'ponte': ['bridge'],
+  'rotazione': ['rotation', 'twist'],
+  'torsione': ['twist', 'rotation'],
+  'salto': ['jump'],
+  'corsa': ['run'],
+  'camminata': ['walk'],
+  'allungamento': ['stretch'],
+  'rullo': ['roller'],
+  'addominali': ['crunch', 'sit up', 'ab', 'core'],
+  'pullup': ['pull up'],
+  'pushup': ['push up'],
+  'chinup': ['chin up'],
+  'situp': ['sit up'],
+  'skullcrusher': ['skull crusher'],
+  // muscoli e parti del corpo
+  'petto': ['chest', 'pec'],
+  'pettorali': ['chest', 'pec'],
+  'dorso': ['back', 'lat'],
+  'dorsali': ['lat', 'back'],
+  'schiena': ['back'],
+  'spalla': ['shoulder'],
+  'deltoide': ['delt', 'shoulder'],
+  'trapezio': ['shrug'],
+  'bicipite': ['biceps', 'bicep', 'curl'],
+  'tricipite': ['triceps', 'tricep'],
+  'avambraccio': ['forearm', 'wrist'],
+  'polso': ['wrist'],
+  'gomito': ['elbow'],
+  'collo': ['neck'],
+  'gamba': ['leg'],
+  'quadricipite': ['quad', 'leg extension'],
+  'femorale': ['hamstring', 'leg curl'],
+  'gluteo': ['glute', 'hip'],
+  'anca': ['hip'],
+  'anche': ['hip'],
+  'polpaccio': ['calf'],
+  'adduttore': ['adductor', 'adduction'],
+  'abduttore': ['abductor', 'abduction'],
+  'lombare': ['back extension', 'hyperextension'],
+  'obliqui': ['oblique', 'side', 'twist'],
+  'ginocchio': ['knee'],
+};
+
+const Set<String> _kSearchStopwords = {
+  'con', 'col', 'al', 'alla', 'alle', 'ai', 'agli', 'allo', 'a', 'da', 'di',
+  'del', 'della', 'dei', 'delle', 'in', 'e', 'ed', 'per', 'su', 'sul', 'sulla',
+  'sui', 'il', 'lo', 'la', 'i', 'gli', 'le', 'un', 'una', 'piana', 'piano',
+  'presa', 'libero', 'libera', 'the', 'with', 'on', 'to', 'and', 'of',
+};
+
+/// Minuscolo, senza accenti né punteggiatura, parole separate da uno spazio.
+String _fold(String s) {
+  const from = 'àáâäèéêëìíîïòóôöùúûü';
+  const to = 'aaaaeeeeiiiioooouuuu';
+  final b = StringBuffer();
+  for (final c in s.toLowerCase().split('')) {
+    final i = from.indexOf(c);
+    b.write(i < 0 ? c : to[i]);
+  }
+  return normalizeExerciseLookup(b.toString());
+}
+
+/// Radice grezza: toglie la vocale finale (panca/panche, manubrio/manubri).
+/// ponytail: niente stemmer vero, i casi -co/-chi stanno nella tolleranza di
+/// una lettera in [_matchesKey].
+String _stem(String w) =>
+    w.length >= 5 && 'aeiou'.contains(w[w.length - 1])
+        ? w.substring(0, w.length - 1)
+        : w;
+
+/// Radici uguali a meno di una lettera; [prefix] (parola in digitazione)
+/// accetta anche l'inizio di una chiave: «manu» → manubrio.
+bool _matchesKey(String s, String k, {bool prefix = false}) =>
+    (s.startsWith(k) && s.length - k.length <= 1) ||
+    (k.startsWith(s) && (prefix ? s.length >= 3 : k.length - s.length <= 1));
+
+List<String> _synonyms(String stem, {bool prefix = false}) => [
+  for (final en in kExerciseSynonyms.entries)
+    if (_matchesKey(stem, _stem(en.key), prefix: prefix)) ...en.value,
+];
+
+/// Riscontro a inizio parola. [prefix] = parola ancora in digitazione;
+/// altrimenti parola intera con al più due lettere in più (plurali, -chi, -s),
+/// così «lat» non prende «lateral» e «ab» non prende «abductor».
+RegExp _wordRe(String f, {bool prefix = false}) =>
+    RegExp(' ${RegExp.escape(f)}${prefix ? '' : '[a-z0-9]{0,2} '}');
+
+class _SearchIdx {
+  _SearchIdx(ExerciseInfo e)
+    : names = {_fold(e.name), ...e.aliases.map(_fold)},
+      main = ' ${_fold([e.name, ...e.aliases].join(' '))} ',
+      en = ' ${_fold('${e.nameEn} ${e.gifSlug}')} ',
+      body = ' ${_fold('${e.category} ${e.primaryMuscle}')} ',
+      words = _fold(e.name).split(' ').length,
+      order = kExerciseCatalog.indexOf(e);
+
+  final Set<String> names;
+  final String main, en, body; // nome+alias · nome EN+slug · categoria+muscolo
+  final int words;
+  final int order; // posizione nel catalogo italiano, -1 = voce GIF
+
+  /// 0 = nel nome/alias, 1 = nome inglese o sinonimo, 2 = categoria/muscolo,
+  /// -1 = nessun riscontro.
+  int tier(RegExp own, List<RegExp> syn) {
+    bool any(String hay) => syn.any((r) => r.hasMatch(hay));
+    if (own.hasMatch(main)) return 0;
+    if (own.hasMatch(en) || any(main) || any(en)) return 1;
+    if (own.hasMatch(body) || any(body)) return 2;
+    return -1;
+  }
+}
+
+final Map<ExerciseInfo, _SearchIdx> _searchIdx = {};
+
+/// Catalogo per archivio e ricerca: voci italiane + GIF, senza le GIF che una
+/// voce italiana già copre (stessa animazione o stesso nome), così lo stesso
+/// esercizio non compare due volte con due nomi.
+final List<ExerciseInfo> kAllExercises = () {
+  final taken = {
+    for (final e in kExerciseCatalog) ...[_fold(e.gifSlug), _fold(e.name)],
+  };
+  return [
+    ...kExerciseCatalog,
+    ...kGifCatalog.where(
+      (e) => !taken.contains(_fold(e.gifSlug)) && !taken.contains(_fold(e.name)),
+    ),
+  ];
+}();
+
+/// Cerca in [pool] (default [kAllExercises]), risultati per pertinenza:
+/// nome esatto, nome che inizia con la query, voci italiane, riscontro più
+/// diretto, nome più corto.
+List<ExerciseInfo> searchExercises(
+  String query, {
+  Iterable<ExerciseInfo>? pool,
+  int? limit,
+}) {
+  final q = _fold(query);
+  if (q.length < 2) return const [];
+  var toks = q.split(' ').where((t) => !_kSearchStopwords.contains(t)).toList();
+  if (toks.isEmpty) toks = q.split(' ');
+  final stems = [for (final t in toks) _stem(t)];
+  final typing = !query.endsWith(' ');
+  bool open(int i) => typing && i == stems.length - 1;
+  final own = [
+    for (var i = 0; i < stems.length; i++) _wordRe(stems[i], prefix: open(i)),
+  ];
+  final syns = [
+    for (var i = 0; i < stems.length; i++)
+      [for (final f in _synonyms(stems[i], prefix: open(i))) _wordRe(f)],
+  ];
+
+  var best = 1;
+  final hits = <({ExerciseInfo e, List<int> key})>[];
+  for (final e in pool ?? kAllExercises) {
+    final x = _searchIdx[e] ??= _SearchIdx(e);
+    var found = 0, cost = 0;
+    for (var i = 0; i < stems.length; i++) {
+      final t = x.tier(own[i], syns[i]);
+      if (t >= 0) {
+        found++;
+        cost += t;
+      }
+    }
+    if (found < best) continue;
+    if (found > best) {
+      best = found;
+      hits.clear();
+    }
+    final exact = x.names.contains(q) ? 0 : (x.main.startsWith(' $q') ? 1 : 2);
+    final local = x.order >= 0;
+    hits.add((e: e, key: [exact, local ? 0 : 1, cost, x.words, x.order]));
+  }
+  hits.sort((a, b) {
+    for (var i = 0; i < a.key.length; i++) {
+      final d = a.key[i] - b.key[i];
+      if (d != 0) return d;
+    }
+    return a.e.name.compareTo(b.e.name);
+  });
+  final out = [for (final h in hits) h.e];
+  return limit != null && out.length > limit ? out.sublist(0, limit) : out;
+}

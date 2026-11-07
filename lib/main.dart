@@ -8489,8 +8489,6 @@ class _WorkoutProgressChartState extends State<_WorkoutProgressChart> {
     return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
   }
 
-  static String _short(double v) => v >= 10000 ? '${(v / 1000).toStringAsFixed(0)}k' : _fmt(v);
-
   @override
   Widget build(BuildContext context) {
     final dark = _isDarkCtx(context);
@@ -8500,34 +8498,28 @@ class _WorkoutProgressChartState extends State<_WorkoutProgressChart> {
     double conv(double kg) => widget.usePounds ? kgToLb(kg) : kg;
     final names = widget.day.exercises.map((e) => e.name).toSet();
 
-    // una sessione = session_id (o la data, per i log vecchi senza id)
-    final vol = <String, double>{}, reps = <String, double>{};
+    // una sessione = session_id (o la data, per i log vecchi senza id).
+    // Punteggio come in Progressi generali: somma delle serie migliori (setScore) di ogni esercizio,
+    // quindi 230×8 batte 220×10 (il volume dava ragione a 220×10).
+    final scores = <String, Map<String, double>>{};
     final date = <String, DateTime?>{};
     final best = <String, Map<String, String>>{};
     for (final h in widget.history) {
       if (h is! Map || !inWorkout(h, widget.day.dayName, names)) continue;
       final raw = h['date']?.toString() ?? '';
-      if (raw.length < 10) continue;
+      final b = bestSet(h['series'] as List?);
+      if (raw.length < 10 || b == null) continue;
       final sid = h['session_id']?.toString() ?? '';
       final key = sid.isNotEmpty ? sid : raw.substring(0, 10);
+      final ex = h['exercise'] as String;
       date.putIfAbsent(key, () => DateTime.tryParse(raw));
-      double bw = -1, br = 0;
-      for (final s in (h['series'] as List? ?? const [])) {
-        final w = ((s['w'] ?? 0) as num).toDouble();
-        final r = ((s['r'] ?? 0) as num).toDouble();
-        vol[key] = (vol[key] ?? 0) + w * r;
-        reps[key] = (reps[key] ?? 0) + r;
-        if (w > bw || (w == bw && r > br)) {
-          bw = w;
-          br = r;
-        }
-      }
-      if (bw >= 0) {
-        best.putIfAbsent(key, () => {})[h['exercise'] as String] =
-            bw > 0 ? '${_fmt(conv(bw))}×${br.toInt()}' : '${br.toInt()} reps';
+      final m = scores.putIfAbsent(key, () => {});
+      if ((m[ex] ?? -1) < b.score) {
+        m[ex] = b.score;
+        best.putIfAbsent(key, () => {})[ex] = b.w > 0 ? '${_fmt(conv(b.w))}×${b.r}' : '${b.r} reps';
       }
     }
-    final keys = date.keys.where(reps.containsKey).toList()
+    final keys = date.keys.toList()
       ..sort((a, b) => (date[a] ?? DateTime(0)).compareTo(date[b] ?? DateTime(0)));
     if (keys.isEmpty) {
       return Padding(
@@ -8536,16 +8528,16 @@ class _WorkoutProgressChartState extends State<_WorkoutProgressChart> {
       );
     }
 
-    final bodyweight = keys.every((k) => (vol[k] ?? 0) <= 0);
-    final unit = bodyweight ? 'reps' : (widget.usePounds ? 'lb' : 'kg');
-    final values = [for (final k in keys) bodyweight ? reps[k]! : conv(vol[k]!)];
+    final values = [for (final k in keys) scores[k]!.values.fold(0.0, (a, b) => a + b)];
     final dates = [for (final k in keys) date[k]];
     final n = values.length;
     final sel = (_sel ?? n - 1).clamp(0, n - 1);
-    final record = values.reduce((a, b) => a > b ? a : b);
-    final delta = values.first > 0 ? (values.last - values.first) / values.first * 100 : 0.0;
+    double? vsPrev(int i) => i > 0 && values[i - 1] > 0 ? (values[i] - values[i - 1]) / values[i - 1] * 100 : null;
+    String pct(double? v) => v == null ? '—' : '${v >= 0 ? '+' : ''}${v.toStringAsFixed(1)}%';
+    Color pctColor(double? v) => v == null ? fg : (v >= 0 ? const Color(0xFF4CD97B) : const Color(0xFFFF6B6B));
+    final delta = n >= 2 && values.first > 0 ? (values.last - values.first) / values.first * 100 : null;
     var lo = values.reduce((a, b) => a < b ? a : b);
-    var hi = record;
+    var hi = values.reduce((a, b) => a > b ? a : b);
     final span = (hi - lo).abs() < 1 ? 1.0 : hi - lo;
     lo = (lo - span * 0.15).clamp(0.0, double.infinity);
     hi = hi + span * 0.15;
@@ -8582,34 +8574,15 @@ class _WorkoutProgressChartState extends State<_WorkoutProgressChart> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(children: [
-          stat(AppL.chartLast, '${_short(values.last)} $unit'),
+          stat(AppL.vsPrevious, pct(vsPrev(n - 1)), color: pctColor(vsPrev(n - 1))),
           const SizedBox(width: 8),
-          stat(AppL.chartRecord, '${_short(record)} $unit', color: accent),
-          const SizedBox(width: 8),
-          stat(
-            AppL.chartSinceStart,
-            '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(0)}%',
-            color: n < 2 ? fg : (delta >= 0 ? const Color(0xFF4CD97B) : const Color(0xFFFF6B6B)),
-          ),
+          stat(AppL.chartSinceStart, pct(delta), color: pctColor(delta)),
         ]),
         const SizedBox(height: 16),
         SizedBox(
           height: 200,
           child: Row(children: [
-            SizedBox(
-              width: 34,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [hi, (hi + lo) / 2, lo]
-                      .map((v) => Text(_short(v), style: TextStyle(color: muted, fontSize: 10)))
-                      .toList(),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
+            // niente asse Y: il punteggio non è in kg, contano le % (come in Progressi generali)
             Expanded(
               child: _tapChart(
                 ctrl: _scrollCtrl,
@@ -8634,7 +8607,7 @@ class _WorkoutProgressChartState extends State<_WorkoutProgressChart> {
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Container(width: 14, height: 3, color: accent),
           const SizedBox(width: 6),
-          Text(bodyweight ? AppL.reps : AppL.totalVolume, style: TextStyle(color: muted, fontSize: 11)),
+          Text(AppL.progressPerSession, style: TextStyle(color: muted, fontSize: 11)),
         ]),
         const SizedBox(height: 14),
         Container(
@@ -8650,8 +8623,8 @@ class _WorkoutProgressChartState extends State<_WorkoutProgressChart> {
                 style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: 13),
               ),
               const Spacer(),
-              Text('${_fmt(values[sel])} $unit',
-                  style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 13)),
+              Text('${pct(vsPrev(sel))} ${AppL.vsPrevious}',
+                  style: TextStyle(color: pctColor(vsPrev(sel)), fontWeight: FontWeight.w800, fontSize: 13)),
             ]),
             const SizedBox(height: 6),
             for (final e in detail.entries)

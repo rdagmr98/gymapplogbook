@@ -2149,57 +2149,125 @@ class _ClientMainPageState extends State<ClientMainPage>
     });
     if (!kIsWeb) _updateWidgetData();
     if (!kIsWeb) _maybeStartWorkoutFromWidget();
-    _offerResumeWorkout();
+    _loadResume();
   }
 
-  bool _resumeAsked = false;
+  WorkoutDay? _resumeDay;
+  int _resumeDone = 0;
 
-  /// App chiusa a metà allenamento: al primo caricamento chiede se riprenderlo.
-  Future<void> _offerResumeWorkout() async {
-    if (_resumeAsked) return;
-    _resumeAsked = true;
+  /// Allenamento lasciato a metà (snapshot sotto le 12 ore): lo mostra la card in cima a La mia scheda.
+  Future<void> _loadResume() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
     WorkoutDay? day;
+    int done = 0;
     for (final k in prefs.getKeys().where((k) => k.startsWith('workout_in_progress_')).toList()) {
-      int ts = 0;
+      Map snap = const {};
       try {
-        ts = ((jsonDecode(prefs.getString(k) ?? '{}') as Map)['ts'] as num?)?.toInt() ?? 0;
+        snap = jsonDecode(prefs.getString(k) ?? '{}') as Map;
       } catch (_) {}
+      final ts = (snap['ts'] as num?)?.toInt() ?? 0;
       final match = myRoutine.where((d) => 'workout_in_progress_${d.dayName}' == k);
       // ponytail: oltre 12 ore lo snapshot è un allenamento abbandonato, si scarta
       if (day != null || match.isEmpty || now - ts > 12 * 3600 * 1000) {
         await prefs.remove(k);
       } else {
         day = match.first;
+        done = (snap['eserciziCompletati'] as List?)?.length ?? 0;
       }
     }
-    if (day == null || !mounted) return;
+    if (mounted) setState(() {
+      _resumeDay = day;
+      _resumeDone = done;
+    });
+  }
+
+  Future<void> _discardResume() async {
+    final day = _resumeDay;
+    if (day == null) return;
     final ok = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,
       builder: (c) => AlertDialog(
         backgroundColor: _isDarkCtx(c) ? const Color(0xFF1C1C1E) : Colors.white,
         title: Text(AppL.resumeWorkoutTitle),
-        content: Text('${day!.dayName}\n\n${AppL.resumeWorkoutMsg}'),
+        content: Text(day.dayName),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: Text(AppL.resumeWorkoutNo),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: Text(AppL.resumeWorkoutYes),
-          ),
+          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(AppL.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: Text(AppL.resumeWorkoutNo)),
         ],
       ),
     );
-    if (!mounted) return;
-    if (ok == true) {
-      _startWorkout(day, resume: true);
-    } else {
-      await prefs.remove('workout_in_progress_${day.dayName}');
-    }
+    if (ok != true) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('workout_in_progress_${day.dayName}');
+    if (mounted) setState(() => _resumeDay = null);
+  }
+
+  /// In cima a La mia scheda: l'allenamento lasciato a metà o quello suggerito per oggi, a un tocco.
+  Widget _buildTodayCard(Color accent) {
+    final resume = _resumeDay;
+    final i = myRoutine.indexWhere((d) => d.dayName == _suggestedWorkoutName());
+    final day = resume ?? (i < 0 ? null : myRoutine[i]);
+    if (day == null) return const SizedBox.shrink();
+    final dark = _isDarkCtx(context);
+    final muted = dark ? Colors.white38 : Colors.black45;
+    return Material(
+      color: dark ? const Color(0xFF1C1C1E) : Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => resume != null ? _startWorkout(day, resume: true) : _startWorkout(day),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: accent.withAlpha(110), width: 1.4),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      (resume != null ? AppL.resumeWorkoutTitle : AppL.today).toUpperCase(),
+                      style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.5),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      day.dayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: dark ? Colors.white : Colors.black87, fontSize: 17, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      resume != null
+                          ? '$_resumeDone/${day.exercises.length} ${AppL.exercisesLabel.toLowerCase()}'
+                          : _lastTrainedLabel(day),
+                      style: TextStyle(color: muted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              if (resume != null)
+                IconButton(
+                  onPressed: _discardResume,
+                  tooltip: AppL.resumeWorkoutNo,
+                  icon: Icon(Icons.close_rounded, color: muted, size: 20),
+                ),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+                child: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 28),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _updateWidgetData() async {
@@ -2646,7 +2714,13 @@ class _ClientMainPageState extends State<ClientMainPage>
           ),
         ],
       ),
-      body: _currentIndex == 0 ? _buildRoutinePage() : _buildTrainPage(),
+      body: Column(
+        children: [
+          if (myRoutine.isNotEmpty)
+            Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 0), child: _buildStreakBanner()),
+          Expanded(child: _currentIndex == 0 ? _buildRoutinePage() : _buildTrainPage()),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -2664,6 +2738,208 @@ class _ClientMainPageState extends State<ClientMainPage>
             label: "Allenati",
           ),
         ],
+      ),
+    );
+  }
+
+  /// Streak fissa sopra entrambe le schede: badge dei giorni fatti nel microciclo.
+  Widget _buildStreakBanner() {
+    return GestureDetector(
+      onTap: _showStreakInfo,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: _isDarkCtx(context) ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _streak > 0
+                ? const Color(0xFFFF6B00).withAlpha(80)
+                : Colors.white12,
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (ctx, bannerConstraints) {
+            final n = myRoutine.length;
+            final sideIconsWidth =
+                bannerConstraints.maxWidth - 68 - 10 - 6 - 18;
+            final fullIconsWidth = bannerConstraints.maxWidth;
+            final fitsSide =
+                n == 0 ||
+                (n * 38.0 + (n - 1) * 6.0) <= sideIconsWidth;
+            final fitsFull =
+                n == 0 ||
+                (n * 38.0 + (n - 1) * 6.0) <= fullIconsWidth;
+
+            final Widget Function(double)
+            buildIconRow = (availWidth) {
+              final iconSize = n > 0
+                  ? (availWidth / n - 8).clamp(20.0, 48.0)
+                  : 48.0;
+              return Row(
+                children: List.generate(n, (i) {
+                  final name = myRoutine[i].dayName;
+                  final done = _streakDone.contains(name);
+                  return Expanded(
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: const Duration(
+                          milliseconds: 300,
+                        ),
+                        width: iconSize,
+                        height: iconSize,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          gradient: done
+                              ? const LinearGradient(
+                                  colors: [
+                                    Color(0xFFFF6B00),
+                                    Color(0xFFFFAB00),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                )
+                              : null,
+                          color: done
+                              ? null
+                              : const Color(0xFF2C2C2E),
+                          boxShadow: done
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.orange
+                                        .withAlpha(100),
+                                    blurRadius: 6,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Opacity(
+                            opacity: done ? 1.0 : 0.2,
+                            child: Image.asset(
+                              'assets/icon_client.png',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              );
+            };
+
+            final doneCount = _streakDone
+                .where(
+                  (nm) => myRoutine.any((d) => d.dayName == nm),
+                )
+                .length;
+
+            if (fitsSide) {
+              return Row(
+                children: [
+                  SizedBox(
+                    width: 68,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.local_fire_department_rounded, size: 22, color: Colors.orange),
+                            const SizedBox(width: 2),
+                            Text(
+                              '$_streak',
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                                height: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          _streak == 1 ? AppL.streakUnitSingle : AppL.streakUnitPlural,
+                          style: TextStyle(
+                            color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$doneCount/${myRoutine.length}',
+                          style: TextStyle(
+                            color: doneCount >= myRoutine.length
+                                ? Colors.orange
+                                : Colors.white38,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: buildIconRow(sideIconsWidth)),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.info_outline,
+                    color: _isDarkCtx(context) ? Colors.white24 : Colors.black26,
+                    size: 15,
+                  ),
+                ],
+              );
+            } else {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.local_fire_department_rounded, size: 16, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$_streak ${_streak == 1 ? AppL.streakUnitSingle : AppL.streakUnitPlural}',
+                        style: const TextStyle(
+                          color: Colors.orange,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '$doneCount/${myRoutine.length}',
+                        style: TextStyle(
+                          color: doneCount >= myRoutine.length
+                              ? Colors.orange
+                              : Colors.white38,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        Icons.info_outline,
+                        color: _isDarkCtx(context) ? Colors.white24 : Colors.black26,
+                        size: 15,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  buildIconRow(
+                    fitsFull ? fullIconsWidth : fullIconsWidth,
+                  ),
+                ],
+              );
+            }
+          },
+        ),
       ),
     );
   }
@@ -2706,17 +2982,20 @@ class _ClientMainPageState extends State<ClientMainPage>
     return LayoutBuilder(
       builder: (ctx, constraints) {
         final n = myRoutine.length;
-        const double topPad = 28, bottomPad = 32;
+        // 94: card Oggi/Riprendi in cima + spazio
+        const double topPad = 16 + 94, bottomPad = 32;
         final double gaps = 14.0 * (n > 1 ? n - 1 : 0);
         final double cardH = n > 0
             ? ((constraints.maxHeight - topPad - bottomPad - gaps) / n)
                 .clamp(80.0, double.infinity)
             : 100.0;
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _buildTodayCard(accent),
+              const SizedBox(height: 14),
               for (int i = 0; i < n; i++) ...[
                 SizedBox(
                   height: cardH,
@@ -3677,7 +3956,7 @@ class _ClientMainPageState extends State<ClientMainPage>
           child: child,
         ),
       ),
-    );
+    ).then((_) => _loadResume());
   }
 
   void _showStreakInfo() {
@@ -3878,207 +4157,6 @@ class _ClientMainPageState extends State<ClientMainPage>
                   AppL.chooseAndStart,
                   style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 13),
                 ),
-                if (myRoutine.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: _showStreakInfo,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _isDarkCtx(context) ? const Color(0xFF1C1C1E) : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: _streak > 0
-                              ? const Color(0xFFFF6B00).withAlpha(80)
-                              : Colors.white12,
-                        ),
-                      ),
-                      child: LayoutBuilder(
-                        builder: (ctx, bannerConstraints) {
-                          final n = myRoutine.length;
-                          final sideIconsWidth =
-                              bannerConstraints.maxWidth - 68 - 10 - 6 - 18;
-                          final fullIconsWidth = bannerConstraints.maxWidth;
-                          final fitsSide =
-                              n == 0 ||
-                              (n * 38.0 + (n - 1) * 6.0) <= sideIconsWidth;
-                          final fitsFull =
-                              n == 0 ||
-                              (n * 38.0 + (n - 1) * 6.0) <= fullIconsWidth;
-
-                          final Widget Function(double)
-                          buildIconRow = (availWidth) {
-                            final iconSize = n > 0
-                                ? (availWidth / n - 8).clamp(20.0, 48.0)
-                                : 48.0;
-                            return Row(
-                              children: List.generate(n, (i) {
-                                final name = myRoutine[i].dayName;
-                                final done = _streakDone.contains(name);
-                                return Expanded(
-                                  child: Center(
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 300,
-                                      ),
-                                      width: iconSize,
-                                      height: iconSize,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        gradient: done
-                                            ? const LinearGradient(
-                                                colors: [
-                                                  Color(0xFFFF6B00),
-                                                  Color(0xFFFFAB00),
-                                                ],
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                              )
-                                            : null,
-                                        color: done
-                                            ? null
-                                            : const Color(0xFF2C2C2E),
-                                        boxShadow: done
-                                            ? [
-                                                BoxShadow(
-                                                  color: Colors.orange
-                                                      .withAlpha(100),
-                                                  blurRadius: 6,
-                                                ),
-                                              ]
-                                            : null,
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Opacity(
-                                          opacity: done ? 1.0 : 0.2,
-                                          child: Image.asset(
-                                            'assets/icon_client.png',
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }),
-                            );
-                          };
-
-                          final doneCount = _streakDone
-                              .where(
-                                (nm) => myRoutine.any((d) => d.dayName == nm),
-                              )
-                              .length;
-
-                          if (fitsSide) {
-                            return Row(
-                              children: [
-                                SizedBox(
-                                  width: 68,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.local_fire_department_rounded, size: 22, color: Colors.orange),
-                                          const SizedBox(width: 2),
-                                          Text(
-                                            '$_streak',
-                                            style: const TextStyle(
-                                              color: Colors.orange,
-                                              fontSize: 30,
-                                              fontWeight: FontWeight.w900,
-                                              height: 1.0,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      Text(
-                                        _streak == 1 ? AppL.streakUnitSingle : AppL.streakUnitPlural,
-                                        style: TextStyle(
-                                          color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        '$doneCount/${myRoutine.length}',
-                                        style: TextStyle(
-                                          color: doneCount >= myRoutine.length
-                                              ? Colors.orange
-                                              : Colors.white38,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(child: buildIconRow(sideIconsWidth)),
-                                const SizedBox(width: 6),
-                                Icon(
-                                  Icons.info_outline,
-                                  color: _isDarkCtx(context) ? Colors.white24 : Colors.black26,
-                                  size: 15,
-                                ),
-                              ],
-                            );
-                          } else {
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.local_fire_department_rounded, size: 16, color: Colors.orange),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '$_streak ${_streak == 1 ? AppL.streakUnitSingle : AppL.streakUnitPlural}',
-                                      style: const TextStyle(
-                                        color: Colors.orange,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      '$doneCount/${myRoutine.length}',
-                                      style: TextStyle(
-                                        color: doneCount >= myRoutine.length
-                                            ? Colors.orange
-                                            : Colors.white38,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    Icon(
-                                      Icons.info_outline,
-                                      color: _isDarkCtx(context) ? Colors.white24 : Colors.black26,
-                                      size: 15,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                buildIconRow(
-                                  fitsFull ? fullIconsWidth : fullIconsWidth,
-                                ),
-                              ],
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -6658,77 +6736,59 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     });
   }
 
-  /// Volta scorsa -> obiettivo di oggi della serie corrente (lo stesso che la ruota ha già impostato),
-  /// sotto tutte le serie della volta scorsa. Toccando spiega il suggerimento.
-  Widget _lastVsGoal(ExerciseConfig ex, Color accent) {
-    final dark = _isDarkCtx(context);
-    final muted = dark ? Colors.white38 : Colors.black38;
-    final last = _getSuggest(ex.name, setN);
-    final lw = (last['w'] as num?)?.toDouble() ?? 0.0;
-    final lr = (last['r'] as num?)?.toInt() ?? 0;
-    final p = _plan(ex, setN);
-    String fmt(num w, num r) => w > 0 ? '${_formatWeightLabel(w.toDouble())} × $r' : '$r reps';
-    final plus = lw > 0 && p.kg - lw > 0.001
-        ? '+${_formatWeightLabel(p.kg - lw)}'
-        : (p.reps > lr ? '+${p.reps - lr} reps' : '');
-    final prev = _previousResults[ex.name] ?? const <Map<String, dynamic>>[];
-    Widget col(String label, String value, Color c, String sub) => Column(
+  /// Serie della volta scorsa come pill, quella [cur] evidenziata. Niente «oggi»: l'obiettivo è già sulle ruote.
+  Widget _lastSets(ExerciseConfig ex, int cur, Color accent) {
+    final muted = _isDarkCtx(context) ? Colors.white38 : Colors.black38;
+    var prev = _previousResults[ex.name] ?? const <Map<String, dynamic>>[];
+    if (prev.isEmpty) {
+      final l = _getSuggest(ex.name, cur);
+      prev = [{'s': cur, 'w': l['w'], 'r': l['r']}];
+    }
+    String fmt(num w, num r) =>
+        w > 0 ? '${formatWeightValue(w.toDouble(), usePounds: _displayInPounds)} × $r' : '$r reps';
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: muted, fontSize: 10, letterSpacing: 1.5)),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(value, style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w800)),
+            Icon(Icons.history_rounded, size: 12, color: muted),
+            const SizedBox(width: 4),
+            Text(
+              '${AppL.lastTime.toUpperCase()} · ${_displayInPounds ? 'lb' : 'kg'}',
+              style: TextStyle(color: muted, fontSize: 10, letterSpacing: 1.5),
             ),
-            if (sub.isNotEmpty)
-              Text(sub, style: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.w700)),
           ],
-        );
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (var i = 0; i < prev.length; i++)
+              _pill(
+                context,
+                fmt((prev[i]['w'] as num?) ?? 0, (prev[i]['r'] as num?) ?? 0),
+                color: ((prev[i]['s'] as num?)?.toInt() ?? i + 1) == cur ? accent : null,
+                fontSize: 12,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Serie della volta scorsa con quella corrente evidenziata. Toccando spiega il suggerimento.
+  Widget _lastVsGoal(ExerciseConfig ex, Color accent) {
+    final p = _plan(ex, setN);
     final tip = p.aumento || p.provaReps != null;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: tip
           ? () => _showSuggestionOverlay(isWeight: p.aumento, targetReps: p.provaReps ?? p.target, force: true)
           : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(child: col(AppL.lastTime.toUpperCase(), fmt(lw, lr), dark ? Colors.white70 : Colors.black87, '')),
-              Icon(Icons.arrow_forward_rounded, size: 18, color: accent),
-              Expanded(child: col(AppL.today.toUpperCase(), fmt(p.kg, p.reps), accent, plus)),
-            ],
-          ),
-          if (prev.length > 1) ...[
-            const SizedBox(height: 6),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 10,
-              runSpacing: 2,
-              children: [
-                for (var i = 0; i < prev.length; i++)
-                  Builder(builder: (_) {
-                    final n = (prev[i]['s'] as num?)?.toInt() ?? i + 1;
-                    final cur = n == setN;
-                    return Text(
-                      'S$n ${fmt((prev[i]['w'] as num?) ?? 0, (prev[i]['r'] as num?) ?? 0)}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: cur ? accent : muted,
-                        fontWeight: cur ? FontWeight.w700 : FontWeight.w500,
-                      ),
-                    );
-                  }),
-              ],
-            ),
-          ],
-        ],
-      ),
+      child: _lastSets(ex, setN, accent),
     );
   }
 
@@ -6816,7 +6876,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
   }
   Widget _buildRestUI() {
     var ex = widget.day.exercises[exI];
-    var suggest = _getSuggest(ex.name, setN);
     // Durante il recupero avvisa solo per l'aumento di peso; le reps restano nella pill.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final suggDelay = _isNewRecord ? const Duration(milliseconds: 2000) : Duration.zero;
@@ -6826,9 +6885,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         if (p.aumento) _showSuggestionOverlay(isWeight: true, targetReps: p.target);
       });
     });
-    double lastW = (suggest['w'] as num?)?.toDouble() ?? 0.0;
-    int lastR = (suggest['r'] as num?)?.toInt() ?? 0;
-
     // GIF del prossimo esercizio
     ExerciseConfig? prossimoConfig;
     if (_prossimoNome.isNotEmpty) {
@@ -7052,33 +7108,11 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      if (lastW > 0) ...[
+                                      // Le serie della volta scorsa di ciò che viene dopo (stesso esercizio o il prossimo).
+                                      if (prossimoConfig != null &&
+                                          (_previousResults[prossimoConfig.name]?.isNotEmpty ?? false)) ...[
                                         const SizedBox(height: 8),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.history_rounded, size: 11,
-                                              color: _isDarkCtx(context) ? Colors.white.withAlpha(70) : Colors.black45),
-                                            const SizedBox(width: 4),
-                                            Text(AppL.lastTime,
-                                              style: TextStyle(
-                                                color: _isDarkCtx(context) ? Colors.white.withAlpha(70) : Colors.black45,
-                                                fontSize: 11,
-                                                letterSpacing: 2,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Wrap(
-                                          alignment: WrapAlignment.center,
-                                          spacing: 8,
-                                          runSpacing: 4,
-                                          children: [
-                                            _pill(context, '${lastW % 1 == 0 ? lastW.toInt() : lastW} kg'),
-                                            _pill(context, '$lastR reps'),
-                                          ],
-                                        ),
+                                        _lastSets(prossimoConfig, prossimoConfig.name == ex.name ? setN : 1, accent),
                                       ],
                                     ],
                                   ),

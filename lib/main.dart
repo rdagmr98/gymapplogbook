@@ -1485,6 +1485,11 @@ class _ClientMainPageState extends State<ClientMainPage>
 
     historyArchive[profileId] = prefs.getString('client_history') ?? '[]';
     carryoverArchive[profileId] = prefs.getString('carryover_weights') ?? '{}';
+    final name = (prefs.getString('athlete_name') ?? '').trim().toLowerCase();
+    if (name.isNotEmpty) {
+      historyArchive['name:$name'] = historyArchive[profileId]!;
+      carryoverArchive['name:$name'] = carryoverArchive[profileId]!;
+    }
 
     await prefs.setString(
       'client_history_archive_v2',
@@ -1500,47 +1505,56 @@ class _ClientMainPageState extends State<ClientMainPage>
       final jsonPulito = jsonEncode(routineList);
 
       final prefs = await SharedPreferences.getInstance();
-      await _archiveCurrentRoutineState(prefs);
+      // Stesso atleta, o nome mancante da una parte = ritocco del coach: storico, pesi e microciclo restano.
+      // Atleta diverso: si archivia lo storico corrente e si ripristina quello del nuovo (per scheda o per nome).
+      final newName = (clientName ?? '').trim().toLowerCase();
+      final prevName = (prefs.getString('athlete_name') ?? '').trim().toLowerCase();
+      if (newName.isEmpty || prevName.isEmpty || newName == prevName) {
+        await prefs.setString('client_routine', jsonPulito);
+      } else {
+        await _archiveCurrentRoutineState(prefs);
 
-      // Salva i pesi dell'ultima sessione per ogni esercizio come "carryover"
-      // così il suggerimento pesi funziona anche dopo aver azzerato i grafici
-      final Map<String, Map<String, dynamic>> newCarryover = {};
-      for (final entry in history) {
-        final name = (entry['exercise'] as String?) ?? '';
-        if (name.isEmpty) continue;
-        final series = (entry['series'] as List?) ?? [];
-        if (series.isEmpty) continue;
-        final last = series.last as Map;
-        final w = (last['w'] ?? last['weight'] ?? 0.0) as num;
-        final r = (last['r'] ?? last['reps'] ?? 0) as num;
-        if (w > 0) newCarryover[name] = {'w': w.toDouble(), 'r': r.toInt()};
+        // Salva i pesi dell'ultima sessione per ogni esercizio come "carryover"
+        // così il suggerimento pesi funziona anche dopo aver azzerato i grafici
+        final Map<String, Map<String, dynamic>> newCarryover = {};
+        for (final entry in history) {
+          final name = (entry['exercise'] as String?) ?? '';
+          if (name.isEmpty) continue;
+          final series = (entry['series'] as List?) ?? [];
+          if (series.isEmpty) continue;
+          final last = series.last as Map;
+          final w = (last['w'] ?? last['weight'] ?? 0.0) as num;
+          final r = (last['r'] ?? last['reps'] ?? 0) as num;
+          if (w > 0) newCarryover[name] = {'w': w.toDouble(), 'r': r.toInt()};
+        }
+        // Merge con il carryover esistente (non sovrascrivere se non c'è storico)
+        for (final k in _carryoverWeights.keys) {
+          if (!newCarryover.containsKey(k))
+            newCarryover[k] = _carryoverWeights[k]!;
+        }
+
+        final profileId = _buildRoutineProfileId(
+          List<dynamic>.from(routineList as List),
+          clientName: clientName,
+        );
+        final historyArchive = _decodeRoutineArchive(
+          prefs.getString('client_history_archive_v2'),
+        );
+        final carryoverArchive = _decodeRoutineArchive(
+          prefs.getString('carryover_archive_v2'),
+        );
+        final restoredHistory = historyArchive[profileId] ?? historyArchive['name:$newName'] ?? '[]';
+        final restoredCarryover =
+            carryoverArchive[profileId] ??
+            carryoverArchive['name:$newName'] ?? jsonEncode(newCarryover);
+
+        await prefs.setString('client_routine', jsonPulito);
+        await prefs.setString('client_history', restoredHistory);
+        await prefs.setString('carryover_weights', restoredCarryover);
+        await prefs.setString('client_routine_profile_id', profileId);
+        // Reset microcycle in progress when routine changes (keep streak count)
+        await prefs.setString('microcycle_done_c', '[]');
       }
-      // Merge con il carryover esistente (non sovrascrivere se non c'è storico)
-      for (final k in _carryoverWeights.keys) {
-        if (!newCarryover.containsKey(k))
-          newCarryover[k] = _carryoverWeights[k]!;
-      }
-
-      final profileId = _buildRoutineProfileId(
-        List<dynamic>.from(routineList as List),
-        clientName: clientName,
-      );
-      final historyArchive = _decodeRoutineArchive(
-        prefs.getString('client_history_archive_v2'),
-      );
-      final carryoverArchive = _decodeRoutineArchive(
-        prefs.getString('carryover_archive_v2'),
-      );
-      final restoredHistory = historyArchive[profileId] ?? '[]';
-      final restoredCarryover =
-          carryoverArchive[profileId] ?? jsonEncode(newCarryover);
-
-      await prefs.setString('client_routine', jsonPulito);
-      await prefs.setString('client_history', restoredHistory);
-      await prefs.setString('carryover_weights', restoredCarryover);
-      await prefs.setString('client_routine_profile_id', profileId);
-      // Reset microcycle in progress when routine changes (keep streak count)
-      await prefs.setString('microcycle_done_c', '[]');
       if (clientName != null && clientName.trim().isNotEmpty) {
         await prefs.setString('athlete_name', clientName.trim());
       }
@@ -3058,11 +3072,12 @@ class _ClientMainPageState extends State<ClientMainPage>
       final exMap = bySessionEx.putIfAbsent(sid, () => {});
       if ((exMap[exName] ?? 0) < best) exMap[exName] = best;
     }
+    final idx = sessionIndex(bySessionEx, sessionDate, sessionDayName);
     final List<_SessionPoint> points = [];
     for (final sid in bySessionEx.keys) {
       final date = sessionDate[sid] ?? '';
       if (date.isEmpty) continue;
-      final score = bySessionEx[sid]!.values.fold(0.0, (a, b) => a + b);
+      final score = idx[sid]!; // andamento concatenato per giorno (sessionIndex)
       points.add(_SessionPoint(
         sessionId: sid,
         date: DateTime.tryParse(date) ?? DateTime(2000),
@@ -4818,25 +4833,18 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     } catch (_) {}
   }
 
-  // Calcola il punteggio performance: > 0 miglioramento, < 0 peggioramento, 0 stallo
+  // Stesso metro del grafico Andamento: somma delle serie migliori degli esercizi rifatti, oggi contro la volta scorsa
   int _calcPerformanceScore() {
-    int improved = 0, regressed = 0;
+    double curr = 0, prev = 0;
     for (final ex in _allCompletedExercises) {
-      final name = ex['exercise'] as String;
-      final currSeries = (ex['series'] as List).cast<Map<String, dynamic>>();
-      final prevSeries = _previousResults[name];
-      if (prevSeries == null || prevSeries.isEmpty || currSeries.isEmpty)
-        continue;
-      // media di setScore: il peso conta più delle reps (230×8 batte 220×10)
-      double avg(List series) =>
-          series.map((s) => setScore(s['w'] as num, s['r'] as num)).reduce((a, b) => a + b) / series.length;
-      final d = avg(currSeries) - avg(prevSeries);
-      if (d > 0.01)
-        improved++;
-      else if (d < -0.01)
-        regressed++;
+      final p = bestSet(_previousResults[ex['exercise']]);
+      final c = bestSet(ex['series'] as List?);
+      if (p == null || c == null) continue;
+      curr += c.score;
+      prev += p.score;
     }
-    return improved - regressed;
+    final d = curr - prev;
+    return d > 0.01 ? 1 : (d < -0.01 ? -1 : 0);
   }
 
   // Ritorna lista dettagli miglioramenti per esercizio
@@ -5735,38 +5743,9 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                     ),
                   ],
                 ),
-                if (lastW > 0) ...[
+                if (lastR > 0) ...[
                   const SizedBox(height: 14),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.history_rounded, size: 11,
-                        color: _isDarkCtx(context) ? Colors.white38 : Colors.black38),
-                      const SizedBox(width: 4),
-                      Text(AppL.lastTime,
-                        style: TextStyle(
-                          color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                          fontSize: 11,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: [
-                      _pill(context, '${lastW % 1 == 0 ? lastW.toInt() : lastW} kg'),
-                      _pill(context, '$lastR reps'),
-                      if (suggerisciReps && _showWeightSuggestion)
-                        _pill(context, AppL.tryReps(targetR), icon: Icons.add_rounded, color: accent),
-                      if (suggerisciAumento && _showWeightSuggestion)
-                        _pill(context, AppL.increaseWeight, icon: Icons.trending_up_rounded, color: accent),
-                    ],
-                  ),
-
+                  _lastVsGoal(ex, accent),
                 ],
                 if (ex.notePT.isNotEmpty) ...[
                   const SizedBox(height: 14),
@@ -6532,6 +6511,80 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     });
   }
 
+  /// Volta scorsa -> obiettivo di oggi della serie corrente (lo stesso che la ruota ha già impostato),
+  /// sotto tutte le serie della volta scorsa. Toccando spiega il suggerimento.
+  Widget _lastVsGoal(ExerciseConfig ex, Color accent) {
+    final dark = _isDarkCtx(context);
+    final muted = dark ? Colors.white38 : Colors.black38;
+    final last = _getSuggest(ex.name, setN);
+    final lw = (last['w'] as num?)?.toDouble() ?? 0.0;
+    final lr = (last['r'] as num?)?.toInt() ?? 0;
+    final p = _plan(ex, setN);
+    String fmt(num w, num r) => w > 0 ? '${_formatWeightLabel(w.toDouble())} × $r' : '$r reps';
+    final plus = lw > 0 && p.kg - lw > 0.001
+        ? '+${_formatWeightLabel(p.kg - lw)}'
+        : (p.reps > lr ? '+${p.reps - lr} reps' : '');
+    final prev = _previousResults[ex.name] ?? const <Map<String, dynamic>>[];
+    Widget col(String label, String value, Color c, String sub) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: muted, fontSize: 10, letterSpacing: 1.5)),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(value, style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w800)),
+            ),
+            if (sub.isNotEmpty)
+              Text(sub, style: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.w700)),
+          ],
+        );
+    final tip = p.aumento || p.provaReps != null;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: tip
+          ? () => _showSuggestionOverlay(isWeight: p.aumento, targetReps: p.provaReps ?? p.target, force: true)
+          : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(child: col(AppL.lastTime.toUpperCase(), fmt(lw, lr), dark ? Colors.white70 : Colors.black87, '')),
+              Icon(Icons.arrow_forward_rounded, size: 18, color: accent),
+              Expanded(child: col(AppL.today.toUpperCase(), fmt(p.kg, p.reps), accent, plus)),
+            ],
+          ),
+          if (prev.length > 1) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 2,
+              children: [
+                for (var i = 0; i < prev.length; i++)
+                  Builder(builder: (_) {
+                    final n = (prev[i]['s'] as num?)?.toInt() ?? i + 1;
+                    final cur = n == setN;
+                    return Text(
+                      'S$n ${fmt((prev[i]['w'] as num?) ?? 0, (prev[i]['r'] as num?) ?? 0)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cur ? accent : muted,
+                        fontWeight: cur ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    );
+                  }),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildInfoPanel(
     ExerciseConfig ex,
     double lastW,
@@ -6554,51 +6607,9 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (lastW > 0) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.history_rounded, size: 11,
-                  color: _isDarkCtx(context) ? Colors.white38 : Colors.black38),
-                const SizedBox(width: 4),
-                Text(AppL.lastTime,
-                  style: TextStyle(
-                    color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                    fontSize: 11,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                _pill(context, '${lastW % 1 == 0 ? lastW.toInt() : lastW} kg', fontSize: 16),
-                _pill(context, '$lastR reps', fontSize: 16),
-              ],
-            ),
-          ],
-          if (suggerisciAumento || suggerisciReps)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: _pill(
-                context,
-                suggerisciAumento ? AppL.increaseWeight : AppL.tryReps(targetR),
-                icon: suggerisciAumento ? Icons.trending_up_rounded : Icons.add_rounded,
-                color: accent,
-                fontSize: 14,
-                onTap: () => _showSuggestionOverlay(
-                  isWeight: suggerisciAumento,
-                  targetReps: targetR,
-                  force: true,
-                ),
-              ),
-            ),
+          if (lastR > 0) _lastVsGoal(ex, accent),
           if (ex.notePT.isNotEmpty) ...[
-            if (lastW > 0) Divider(color: _isDarkCtx(context) ? Colors.white10 : Colors.black12, height: 10),
+            if (lastR > 0) Divider(color: _isDarkCtx(context) ? Colors.white10 : Colors.black12, height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -7025,10 +7036,10 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     );
   }
 
-  /// Doppia progressione, serie per serie, contro la stessa serie della volta scorsa:
-  /// reps oltre il target -> le ripropone; target+2 -> suggerisce più peso;
-  /// peso già aumentato oggi sulla serie prima -> lo porta qui e le reps tornano al target.
+  /// Doppia progressione, serie per serie, contro la stessa serie della volta scorsa (regole in progressionPlan):
+  /// sempre un passo avanti, +1 rep oppure, a target+2, più peso con le reps di nuovo al target.
   /// Va chiamata con ex = esercizio corrente (usa currentExSeries).
+  final Map<String, double> _steps = {}; // salto di peso abituale per esercizio (weightStep)
   ProgressionPlan _plan(ExerciseConfig ex, int s) {
     double w(Map m) => (m['w'] as num?)?.toDouble() ?? 0.0;
     final p = _getSuggest(ex.name, s);
@@ -7039,6 +7050,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
       lastReps: (p['r'] as num?)?.toInt() ?? 0,
       todayPrevKg: today.isEmpty ? null : w(today.last),
       lastPrevKg: today.isEmpty ? 0 : w(_getSuggest(ex.name, s - 1)),
+      step: _steps.putIfAbsent(ex.name, () => weightStep(widget.history, ex.name)),
     );
   }
 
@@ -8050,7 +8062,7 @@ class _WorkoutProgressChartState extends State<_WorkoutProgressChart> {
       );
     }
 
-    final values = [for (final k in keys) scores[k]!.values.fold(0.0, (a, b) => a + b)];
+    final values = chainIndex([for (final k in keys) scores[k]!]); // solo esercizi in comune con la sessione prima
     final dates = [for (final k in keys) date[k]];
     final n = values.length;
     final sel = (_sel ?? n - 1).clamp(0, n - 1);
@@ -9285,12 +9297,13 @@ class _OverallProgressPageState extends State<_OverallProgressPage> {
       if ((exMap[exName] ?? 0) < best) exMap[exName] = best;
     }
 
+    final idx = sessionIndex(bySessionEx, sessionDate, sessionDayName);
     final List<_SessionPoint> points = [];
     for (final sid in bySessionEx.keys) {
       final date = sessionDate[sid] ?? '';
       if (date.isEmpty) continue;
       // Score = somma delle serie migliori di ogni esercizio della sessione
-      final score = bySessionEx[sid]!.values.fold(0.0, (a, b) => a + b);
+      final score = idx[sid]!; // andamento concatenato per giorno (sessionIndex)
       points.add(_SessionPoint(
         sessionId: sid,
         date: DateTime.tryParse(date) ?? DateTime(2000),

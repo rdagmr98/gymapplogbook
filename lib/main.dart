@@ -3351,7 +3351,10 @@ class _ClientMainPageState extends State<ClientMainPage>
               Divider(color: _isDarkCtx(context) ? Colors.white12 : Colors.black87.withAlpha(10), height: 1),
               // Exercise list
               Expanded(
-                child: ListView.separated(
+                child: LayoutBuilder(builder: (_, lc) {
+                // ponytail: le righe crescono finché la lista riempie il foglio
+                final t = ((lc.maxHeight - 16) / day.exercises.length - 17).clamp(52.0, 96.0);
+                return ListView.separated(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: day.exercises.length,
                   separatorBuilder: (_, i) {
@@ -3390,8 +3393,8 @@ class _ClientMainPageState extends State<ClientMainPage>
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(10),
                                       child: Container(
-                                        width: 52,
-                                        height: 52,
+                                        width: t,
+                                        height: t,
                                         color: dark ? const Color(0xFF1C1C1E) : const Color(0xFFF4F4F6),
                                         child: gif == null
                                             ? Icon(Icons.fitness_center_rounded, size: 22, color: dark ? Colors.white24 : Colors.black26)
@@ -3413,7 +3416,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               fontWeight: FontWeight.w600,
-                                              fontSize: 14,
+                                              fontSize: t > 70 ? 16 : 14,
                                               color: dark ? Colors.white : Colors.black87,
                                             ),
                                           ),
@@ -3448,7 +3451,8 @@ class _ClientMainPageState extends State<ClientMainPage>
                       ),
                     );
                   },
-                ),
+                );
+                }),
               ),
             ],
           ),
@@ -4064,91 +4068,155 @@ class _ClientMainPageState extends State<ClientMainPage>
             ),
           ),
         ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate((_, i) {
-              final d = myRoutine[i];
-              final label = _lastTrainedLabel(d);
-              final isToday = label == AppL.today;
-              final isSuggested = d.dayName == suggestedName;
-              final dark = _isDarkCtx(context);
-              final muted = dark ? Colors.white38 : Colors.black38;
-              // ponytail: card a una riga, tutta la card avvia; niente elenco esercizi (sta nel dettaglio)
-              return GestureDetector(
-                onTap: () => _startWorkout(d),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
-                  decoration: BoxDecoration(
-                    color: dark ? const Color(0xFF111113) : Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: isSuggested ? accent.withAlpha(120) : (dark ? Colors.white.withAlpha(15) : Colors.black12),
-                      width: isSuggested ? 1.5 : 1,
-                    ),
-                    boxShadow: isSuggested ? [BoxShadow(color: accent.withAlpha(40), blurRadius: 16)] : null,
+        // ponytail: le card si dividono l'altezza sotto l'intestazione e riempiono la pagina; sotto i 118 scorrono
+        SliverLayoutBuilder(
+          builder: (ctx, sc) {
+            final n = myRoutine.length;
+            final free = sc.viewportMainAxisExtent - sc.precedingScrollExtent - 44 - (n - 1) * 10;
+            final h = (free / n).clamp(118.0, 200.0);
+            return SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (_, i) => Padding(
+                    padding: EdgeInsets.only(bottom: i == n - 1 ? 0 : 10),
+                    child: _trainDayCard(myRoutine[i], h, suggestedName, accent),
                   ),
-                  child: Row(
+                  childCount: n,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // ponytail: card di Allenati ad altezza h (calcolata per riempire la pagina): muscoli + miniature esercizi
+  Widget _trainDayCard(WorkoutDay d, double h, String? suggestedName, Color accent) {
+    final label = _lastTrainedLabel(d);
+    final isToday = label == AppL.today;
+    final isSuggested = d.dayName == suggestedName;
+    final dark = _isDarkCtx(context);
+    final muted = dark ? Colors.white38 : Colors.black38;
+    final mus = (h * 0.4).clamp(44.0, 72.0);
+    Widget thumb(double s, String? gif, {String? more}) => ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: s,
+            height: s,
+            alignment: Alignment.center,
+            color: dark ? const Color(0xFF1C1C1E) : const Color(0xFFF4F4F6),
+            child: more != null
+                ? Text(more, style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w700))
+                : gif == null
+                    ? Icon(Icons.fitness_center_rounded, size: s * 0.45, color: muted)
+                    : Image.asset(gif, width: s, height: s, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+          ),
+        );
+    return GestureDetector(
+      onTap: () => _startWorkout(d),
+      child: Container(
+        height: h,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF111113) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSuggested ? accent.withAlpha(120) : (dark ? Colors.white.withAlpha(15) : Colors.black12),
+            width: isSuggested ? 1.5 : 1,
+          ),
+          boxShadow: isSuggested ? [BoxShadow(color: accent.withAlpha(40), blurRadius: 16)] : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (d.muscleImage != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.asset(
+                      muscleAssetPath(d.muscleImage),
+                      width: mus,
+                      height: mus,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => SizedBox(width: mus, height: mus),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              d.dayName.toUpperCase(),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: TextStyle(
-                                color: isSuggested ? accent : (dark ? Colors.white : Colors.black87),
-                                fontSize: 17,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${d.exercises.length} ${AppL.exercises.toLowerCase()} · ${d.exercises.fold(0, (s, ex) => s + ex.targetSets)} ${AppL.sets.toLowerCase()}',
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: TextStyle(color: muted, fontSize: 12),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(isToday ? Icons.check_circle : Icons.history, size: 12, color: isToday ? accent : muted),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    label,
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                    style: TextStyle(color: isToday ? accent : muted, fontSize: 11, fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                      Text(
+                        d.dayName.toUpperCase(),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: isSuggested ? accent : (dark ? Colors.white : Colors.black87),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: isSuggested ? accent : accent.withAlpha(30),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.play_arrow_rounded, size: 28, color: isSuggested ? Colors.black : accent),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(isToday ? Icons.check_circle : Icons.history, size: 12, color: isToday ? accent : muted),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              label,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: TextStyle(color: isToday ? accent : muted, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              );
-            }, childCount: myRoutine.length),
-          ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isSuggested ? accent : accent.withAlpha(30),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.play_arrow_rounded, size: 26, color: isSuggested ? Colors.black : accent),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (_, c) {
+                  final ex = d.exercises;
+                  if (ex.isEmpty || c.maxHeight < 28) return const SizedBox.shrink();
+                  const gap = 6.0;
+                  final s = scala.min(c.maxHeight, scala.min(64.0, (c.maxWidth - gap * (ex.length - 1)) / ex.length)).clamp(28.0, 64.0);
+                  final fit = ((c.maxWidth + gap) / (s + gap) + 1e-6).floor();
+                  final over = ex.length > fit;
+                  final shown = over ? fit - 1 : ex.length;
+                  return Row(
+                    children: [
+                      for (int i = 0; i < shown; i++) ...[
+                        if (i > 0) const SizedBox(width: gap),
+                        thumb(s, exerciseGifPath(ex[i].name, ex[i].gifFilename)),
+                      ],
+                      if (over) ...[const SizedBox(width: gap), thumb(s, null, more: '+${ex.length - shown}')],
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

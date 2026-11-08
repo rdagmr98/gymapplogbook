@@ -2203,72 +2203,6 @@ class _ClientMainPageState extends State<ClientMainPage>
     if (mounted) setState(() => _resumeDay = null);
   }
 
-  /// In cima a La mia scheda: l'allenamento lasciato a metà o quello suggerito per oggi, a un tocco.
-  Widget _buildTodayCard(Color accent) {
-    final resume = _resumeDay;
-    final i = myRoutine.indexWhere((d) => d.dayName == _suggestedWorkoutName());
-    final day = resume ?? (i < 0 ? null : myRoutine[i]);
-    if (day == null) return const SizedBox.shrink();
-    final dark = _isDarkCtx(context);
-    final muted = dark ? Colors.white38 : Colors.black45;
-    return Material(
-      color: dark ? const Color(0xFF1C1C1E) : Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => resume != null ? _startWorkout(day, resume: true) : _startWorkout(day),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: accent.withAlpha(110), width: 1.4),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      (resume != null ? AppL.resumeWorkoutTitle : AppL.today).toUpperCase(),
-                      style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.5),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      day.dayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: dark ? Colors.white : Colors.black87, fontSize: 17, fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      resume != null
-                          ? '$_resumeDone/${day.exercises.length} ${AppL.exercisesLabel.toLowerCase()}'
-                          : _lastTrainedLabel(day),
-                      style: TextStyle(color: muted, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              if (resume != null)
-                IconButton(
-                  onPressed: _discardResume,
-                  tooltip: AppL.resumeWorkoutNo,
-                  icon: Icon(Icons.close_rounded, color: muted, size: 20),
-                ),
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
-                child: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 28),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Future<void> _updateWidgetData() async {
     try {
@@ -2982,8 +2916,7 @@ class _ClientMainPageState extends State<ClientMainPage>
     return LayoutBuilder(
       builder: (ctx, constraints) {
         final n = myRoutine.length;
-        // 94: card Oggi/Riprendi in cima + spazio
-        const double topPad = 16 + 94, bottomPad = 32;
+        const double topPad = 16, bottomPad = 32;
         final double gaps = 14.0 * (n > 1 ? n - 1 : 0);
         final double cardH = n > 0
             ? ((constraints.maxHeight - topPad - bottomPad - gaps) / n)
@@ -2994,8 +2927,6 @@ class _ClientMainPageState extends State<ClientMainPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildTodayCard(accent),
-              const SizedBox(height: 14),
               for (int i = 0; i < n; i++) ...[
                 SizedBox(
                   height: cardH,
@@ -4187,9 +4118,11 @@ class _ClientMainPageState extends State<ClientMainPage>
 
   // ponytail: card di Allenati ad altezza h (calcolata per riempire la pagina): muscoli + miniature esercizi
   Widget _trainDayCard(WorkoutDay d, double h, String? suggestedName, Color accent) {
-    final label = _lastTrainedLabel(d);
-    final isToday = label == AppL.today;
-    final isSuggested = d.dayName == suggestedName;
+    // Allenamento interrotto: la sua card riprende da dove eri rimasto (pressione lunga per scartarlo).
+    final paused = _resumeDay?.dayName == d.dayName;
+    final label = paused ? '${AppL.resumeWorkoutYes} · $_resumeDone/${d.exercises.length}' : _lastTrainedLabel(d);
+    final isToday = paused || label == AppL.today;
+    final isSuggested = _resumeDay != null ? paused : d.dayName == suggestedName;
     final dark = _isDarkCtx(context);
     final muted = dark ? Colors.white38 : Colors.black38;
     final mus = (h * 0.4).clamp(44.0, 72.0);
@@ -4208,7 +4141,8 @@ class _ClientMainPageState extends State<ClientMainPage>
           ),
         );
     return GestureDetector(
-      onTap: () => _startWorkout(d),
+      onTap: () => paused ? _startWorkout(d, resume: true) : _startWorkout(d),
+      onLongPress: paused ? _discardResume : null,
       child: Container(
         height: h,
         padding: const EdgeInsets.all(12),
@@ -4257,7 +4191,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(isToday ? Icons.check_circle : Icons.history, size: 12, color: isToday ? accent : muted),
+                          Icon(paused ? Icons.pause_circle_rounded : isToday ? Icons.check_circle : Icons.history, size: 12, color: isToday ? accent : muted),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
@@ -5973,7 +5907,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                       ),
                 if (lastR > 0) ...[
                   const SizedBox(height: 14),
-                  _lastVsGoal(ex, accent),
+                  _lastVsGoal(ex),
                 ],
                 if (ex.notePT.isNotEmpty) ...[
                   const SizedBox(height: 14),
@@ -6736,51 +6670,40 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     });
   }
 
-  /// Serie della volta scorsa come pill, quella [cur] evidenziata. Niente «oggi»: l'obiettivo è già sulle ruote.
-  Widget _lastSets(ExerciseConfig ex, int cur, Color accent) {
-    final muted = _isDarkCtx(context) ? Colors.white38 : Colors.black38;
-    var prev = _previousResults[ex.name] ?? const <Map<String, dynamic>>[];
-    if (prev.isEmpty) {
-      final l = _getSuggest(ex.name, cur);
-      prev = [{'s': cur, 'w': l['w'], 'r': l['r']}];
-    }
-    String fmt(num w, num r) =>
-        w > 0 ? '${formatWeightValue(w.toDouble(), usePounds: _displayInPounds)} × $r' : '$r reps';
+  /// Volta scorsa della serie [cur]: kg e reps in due pill. Niente «oggi»: l'obiettivo è già sulle ruote.
+  Widget _lastSets(ExerciseConfig ex, int cur) {
+    final l = _getSuggest(ex.name, cur);
+    final w = (l['w'] as num?)?.toDouble() ?? 0;
+    final r = (l['r'] as num?)?.toInt() ?? 0;
+    if (r <= 0) return const SizedBox.shrink();
+    final muted = _isDarkCtx(context) ? Colors.white.withAlpha(70) : Colors.black45;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.history_rounded, size: 12, color: muted),
+            Icon(Icons.history_rounded, size: 11, color: muted),
             const SizedBox(width: 4),
-            Text(
-              '${AppL.lastTime.toUpperCase()} · ${_displayInPounds ? 'lb' : 'kg'}',
-              style: TextStyle(color: muted, fontSize: 10, letterSpacing: 1.5),
-            ),
+            Text(AppL.lastTime, style: TextStyle(color: muted, fontSize: 11, letterSpacing: 2)),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Wrap(
           alignment: WrapAlignment.center,
-          spacing: 6,
-          runSpacing: 6,
+          spacing: 8,
+          runSpacing: 4,
           children: [
-            for (var i = 0; i < prev.length; i++)
-              _pill(
-                context,
-                fmt((prev[i]['w'] as num?) ?? 0, (prev[i]['r'] as num?) ?? 0),
-                color: ((prev[i]['s'] as num?)?.toInt() ?? i + 1) == cur ? accent : null,
-                fontSize: 12,
-              ),
+            if (w > 0) _pill(context, '${formatWeightValue(w, usePounds: _displayInPounds)} ${_displayInPounds ? 'lb' : 'kg'}'),
+            _pill(context, '$r reps'),
           ],
         ),
       ],
     );
   }
 
-  /// Serie della volta scorsa con quella corrente evidenziata. Toccando spiega il suggerimento.
-  Widget _lastVsGoal(ExerciseConfig ex, Color accent) {
+  /// Volta scorsa della serie corrente. Toccando spiega il suggerimento.
+  Widget _lastVsGoal(ExerciseConfig ex) {
     final p = _plan(ex, setN);
     final tip = p.aumento || p.provaReps != null;
     return GestureDetector(
@@ -6788,7 +6711,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
       onTap: tip
           ? () => _showSuggestionOverlay(isWeight: p.aumento, targetReps: p.provaReps ?? p.target, force: true)
           : null,
-      child: _lastSets(ex, setN, accent),
+      child: _lastSets(ex, setN),
     );
   }
 
@@ -6814,7 +6737,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (lastR > 0) _lastVsGoal(ex, accent),
+          if (lastR > 0) _lastVsGoal(ex),
           if (ex.notePT.isNotEmpty) ...[
             if (lastR > 0) Divider(color: _isDarkCtx(context) ? Colors.white10 : Colors.black12, height: 10),
             Row(
@@ -7112,7 +7035,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                                       if (prossimoConfig != null &&
                                           (_previousResults[prossimoConfig.name]?.isNotEmpty ?? false)) ...[
                                         const SizedBox(height: 8),
-                                        _lastSets(prossimoConfig, prossimoConfig.name == ex.name ? setN : 1, accent),
+                                        _lastSets(prossimoConfig, prossimoConfig.name == ex.name ? setN : 1),
                                       ],
                                     ],
                                   ),

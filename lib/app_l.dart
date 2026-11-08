@@ -57,6 +57,9 @@ class AppL {
     'pause': {'it': 'Pausa tra esercizi (s)', 'en': 'Pause between exercises (s)', 'es': 'Pausa entre ejercicios (s)', 'pt': 'Pausa entre exercícios (s)', 'fr': 'Pause entre exercices (s)', 'de': 'Pause zwischen Übungen (s)', 'el': 'Παύση μεταξύ ασκήσεων (s)', 'ar': 'استراحة بين التمارين (s)', 'pl': 'Przerwa między ćwiczeniami (s)', 'ro': 'Pauză între exerciții (s)', 'hu': 'Szünet gyakorlatok között (s)'},
     'browseArchive': {'it': 'Sfoglia archivio', 'en': 'Browse archive', 'es': 'Ver archivo', 'pt': 'Ver arquivo', 'fr': 'Parcourir l\'archive', 'de': 'Archiv durchsuchen', 'el': 'Περιήγηση αρχείου', 'ar': 'تصفح الأرشيف', 'pl': 'Przeglądaj archiwum', 'ro': 'Răsfoiește arhiva', 'hu': 'Archívum böngészése'},
     'repsPerSet': {'it': 'Reps per serie', 'en': 'Reps per set', 'es': 'Reps por serie', 'pt': 'Reps por série', 'fr': 'Reps par série', 'de': 'Wdhl. pro Satz', 'el': 'Επαναλήψεις ανά σετ', 'ar': 'تكرارات لكل مجموعة', 'pl': 'Powtórzenia na serię', 'ro': 'Rep. per set', 'hu': 'Ismétlés/sorozat'},
+    'coachNote': {'it': 'Note coach', 'en': 'Coach notes', 'es': 'Notas del coach', 'pt': 'Notas do coach', 'fr': 'Notes du coach', 'de': 'Coach-Notizen', 'el': 'Σημειώσεις προπονητή', 'ar': 'ملاحظات المدرب', 'pl': 'Notatki trenera', 'ro': 'Notițe antrenor', 'hu': 'Edzői jegyzet'},
+    'equipment': {'it': 'Attrezzo', 'en': 'Equipment', 'es': 'Equipamiento', 'pt': 'Equipamento', 'fr': 'Équipement', 'de': 'Gerät', 'el': 'Εξοπλισμός', 'ar': 'المعدات', 'pl': 'Sprzęt', 'ro': 'Echipament', 'hu': 'Eszköz'},
+    'moreExercises': {'it': 'Più esercizi', 'en': 'More exercises', 'es': 'Más ejercicios', 'pt': 'Mais exercícios', 'fr': "Plus d'exercices", 'de': 'Mehr Übungen', 'el': 'Περισσότερες ασκήσεις', 'ar': 'المزيد من التمارين', 'pl': 'Więcej ćwiczeń', 'ro': 'Mai multe exerciții', 'hu': 'Több gyakorlat'},
     'muscleGroup': {'it': 'Gruppo muscolare', 'en': 'Muscle group', 'es': 'Grupo muscular', 'pt': 'Grupo muscular', 'fr': 'Groupe musculaire', 'de': 'Muskelgruppe', 'el': 'Μυϊκή ομάδα', 'ar': 'مجموعة عضلية', 'pl': 'Grupa mięśniowa', 'ro': 'Grup muscular', 'hu': 'Izomcsoport'},
     'chooseExercise': {'it': 'Scegli esercizio', 'en': 'Choose exercise', 'es': 'Elegir ejercicio', 'pt': 'Escolher exercício', 'fr': 'Choisir exercice', 'de': 'Übung wählen', 'el': 'Επιλέξτε άσκηση', 'ar': 'اختر تمريناً', 'pl': 'Wybierz ćwiczenie', 'ro': 'Alege exercițiu', 'hu': 'Válassz gyakorlatot'},
     'noScheduleYet': {'it': 'Nessun giorno ancora', 'en': 'No days yet', 'es': 'Sin días aún', 'pt': 'Sem dias ainda', 'fr': 'Pas encore de jours', 'de': 'Noch keine Tage', 'el': 'Δεν υπάρχουν ημέρες', 'ar': 'لا أيام بعد', 'pl': 'Brak dni', 'ro': 'Nicio zi încă', 'hu': 'Még nincs nap'},
@@ -167,7 +170,6 @@ class AppL {
     'chartRecord': {'it': 'Record', 'en': 'Best', 'es': 'Récord', 'pt': 'Recorde', 'fr': 'Record', 'de': 'Bestwert', 'el': 'Ρεκόρ', 'ar': 'الأفضل', 'pl': 'Rekord', 'ro': 'Record', 'hu': 'Rekord'},
     'chartSinceStart': {'it': 'Dall\'inizio', 'en': 'Since start', 'es': 'Desde el inicio', 'pt': 'Desde o início', 'fr': 'Depuis le début', 'de': 'Seit Beginn', 'el': 'Από την αρχή', 'ar': 'منذ البداية', 'pl': 'Od początku', 'ro': 'De la început', 'hu': 'Kezdés óta'},
     'chartBestSet': {'it': 'Serie migliore', 'en': 'Best set', 'es': 'Mejor serie', 'pt': 'Melhor série', 'fr': 'Meilleure série', 'de': 'Bester Satz', 'el': 'Καλύτερο σετ', 'ar': 'أفضل مجموعة', 'pl': 'Najlepsza seria', 'ro': 'Cea mai bună serie', 'hu': 'Legjobb sorozat'},
-    'weeklyVolume': {'it': 'Volume settimanale', 'en': 'Weekly volume', 'es': 'Volumen semanal', 'pt': 'Volume semanal', 'fr': 'Volume hebdomadaire', 'de': 'Wochenvolumen', 'el': 'Εβδομαδιαίος όγκος', 'ar': 'الحجم الأسبوعي', 'pl': 'Objętość tygodniowa', 'ro': 'Volum săptămânal', 'hu': 'Heti volumen'},
     'chartMaxReps': {'it': 'Ripetizioni max', 'en': 'Max reps', 'es': 'Reps máx.', 'pt': 'Reps máx.', 'fr': 'Reps max', 'de': 'Max. Wdh.', 'el': 'Μέγιστες επαναλήψεις', 'ar': 'أقصى تكرارات', 'pl': 'Maks. powtórzenia', 'ro': 'Repetări max.', 'hu': 'Max. ismétlés'},
     'noData': {'it': 'Nessun dato', 'en': 'No data', 'es': 'Sin datos', 'pt': 'Sem dados', 'fr': 'Pas de données', 'de': 'Keine Daten', 'el': 'Δεν υπάρχουν δεδομένα', 'ar': 'لا توجد بيانات', 'pl': 'Brak danych', 'ro': 'Nu există date', 'hu': 'Nincs adat'},
     'noDataRegistered': {'it': 'Nessun dato registrato', 'en': 'No recorded data', 'es': 'Sin datos registrados', 'pt': 'Sem dados registrados', 'fr': 'Aucune donnée enregistrée', 'de': 'Keine erfassten Daten', 'el': 'Δεν υπάρχουν καταγεγραμμένα δεδομένα', 'ar': 'لا توجد بيانات مسجلة', 'pl': 'Brak zarejestrowanych danych', 'ro': 'Nu există date înregistrate', 'hu': 'Nincs rögzített adat'},
@@ -362,6 +364,9 @@ class AppL {
   static String get browseArchive => _t('browseArchive');
   static String get repsPerSet => _t('repsPerSet');
   static String get muscleGroup => _t('muscleGroup');
+  static String get coachNote => _t('coachNote');
+  static String get equipment => _t('equipment');
+  static String get moreExercises => _t('moreExercises');
   static String get chooseExercise => _t('chooseExercise');
   static String get noScheduleYet => _t('noScheduleYet');
   static String get addFirstDay => _t('addFirstDay');
@@ -472,7 +477,6 @@ class AppL {
   static String get chartSinceStart => _t('chartSinceStart');
   static String get chartBestSet => _t('chartBestSet');
   static String get chartMaxReps => _t('chartMaxReps');
-  static String get weeklyVolume => _t('weeklyVolume');
   static String get noData => _t('noData');
   static String get noDataRegistered => _t('noDataRegistered');
   static String get myNotes => _t('myNotes');

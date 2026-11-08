@@ -27,6 +27,7 @@ import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
 // ignore: deprecated_member_use
 import 'js_stub.dart' if (dart.library.js) 'dart:js' as js;
 import 'gif_exercise_catalog.dart';
+import 'exercise_catalog.dart';
 import 'workout_tutorial.dart';
 import 'app_l.dart';
 import 'progression.dart';
@@ -460,6 +461,200 @@ String exerciseAnimationAssetPath(String slug) =>
 
 String muscleAssetPath(String? fileName) =>
     'assets/muscle/${fileName!.replaceAll(RegExp(r"\.png$", caseSensitive: false), ".webp")}';
+
+ExerciseInfo? exerciseInfoFor(String name, String? gif) =>
+    (gif != null ? findByGifSlug(gif) : null) ?? findAnyExercise(name);
+
+String? exerciseGifPath(String name, String? gif) {
+  if (gif != null) return exerciseAnimationAssetPath(gif);
+  final info = findAnyExercise(name);
+  return info != null ? exerciseAnimationAssetPath(info.gifSlug) : null;
+}
+
+/// Dettaglio esercizio unico: dalla scheda (con [ex]) e durante l'allenamento.
+void showExerciseDetail(BuildContext context, {required String name, String? gifFilename, ExerciseConfig? ex}) {
+  if (name.isEmpty) return;
+  final accent = Theme.of(context).colorScheme.primary;
+  final dark = _isDarkCtx(context);
+  final fg = dark ? Colors.white : Colors.black87;
+  final muted = dark ? Colors.white54 : Colors.black54;
+  final card = dark ? const Color(0xFF1C1C1E) : const Color(0xFFF4F4F6);
+  final info = exerciseInfoFor(name, gifFilename);
+  final gifPath = exerciseGifPath(name, gifFilename);
+
+  Widget chip(String label, IconData icon, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: color.withAlpha(20),
+      border: Border.all(color: color.withAlpha(60)),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 13, color: color),
+      const SizedBox(width: 4),
+      Text(label, style: TextStyle(color: color, fontSize: 11)),
+    ]),
+  );
+
+  Widget section(String title, String body, Color bg, Color titleColor) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: TextStyle(color: titleColor, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
+      const SizedBox(height: 6),
+      Text(body, style: TextStyle(color: fg, fontSize: 13, height: 1.5)),
+    ]),
+  );
+
+  Widget muscleLine(IconData icon, String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, size: 14, color: accent),
+      const SizedBox(width: 6),
+      Text('$label: ', style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.bold)),
+      Expanded(child: Text(value, style: TextStyle(color: fg, fontSize: 12))),
+    ]),
+  );
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: dark ? const Color(0xFF0E0E10) : Colors.white,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    builder: (c) => DraggableScrollableSheet(
+      initialChildSize: 0.8,
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (_, scrollCtrl) => ListView(
+        controller: scrollCtrl,
+        padding: EdgeInsets.fromLTRB(20, 0, 20, _bottomNavInset(c) + 24),
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(color: dark ? Colors.white12 : Colors.black12, borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          Row(children: [
+            Container(width: 3, height: 22, decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                name.toUpperCase(),
+                style: TextStyle(color: accent, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+              ),
+            ),
+          ]),
+          if (info != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              AppL.lang == 'en' ? info.nameEn : info.name,
+              style: TextStyle(color: muted, fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
+          if (ex != null) ...[
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 6, children: [
+              chip('${ex.targetSets} ${AppL.sets.toLowerCase()}', Icons.repeat_rounded, accent),
+              chip('${ex.repsList.isNotEmpty ? ex.repsList.join('-') : '?'} ${AppL.reps.toLowerCase()}', Icons.numbers_rounded, accent),
+              if (ex.recoveryTime > 0) chip('${ex.recoveryTime}s ${AppL.recoverySuffix}', Icons.timer_outlined, muted),
+            ]),
+            if (ex.notePT.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                  border: const Border(left: BorderSide(color: Colors.amber, width: 3)),
+                ),
+                child: Text(
+                  '${AppL.coachNote}: ${ex.notePT}',
+                  style: TextStyle(color: dark ? Colors.amber : Colors.brown.shade700, fontSize: 13),
+                ),
+              ),
+            ],
+          ],
+          const SizedBox(height: 14),
+          if (gifPath != null)
+            Container(
+              height: 300,
+              decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(16)),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                gifPath,
+                width: double.infinity,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Icon(Icons.fitness_center, size: 80, color: muted),
+              ),
+            ),
+          if (info != null && info.muscleImages.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(children: [
+              for (int i = 0; i < info.muscleImages.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    // ponytail: rapporto delle immagini in assets/muscle (1118×944), intere senza tagli
+                    child: AspectRatio(
+                      aspectRatio: 1118 / 944,
+                      child: Image.asset(muscleAssetPath(info.muscleImages[i]), fit: BoxFit.contain),
+                    ),
+                  ),
+                ),
+              ],
+            ]),
+          ],
+          const SizedBox(height: 14),
+          if (info != null) ...[
+            muscleLine(Icons.fitness_center_rounded, AppL.primaryMuscle, info.primaryMuscle),
+            if (info.secondaryMuscles.isNotEmpty)
+              muscleLine(Icons.grain_rounded, AppL.secondaryMuscles, info.secondaryMuscles),
+            const SizedBox(height: 10),
+            section(AppL.execution, info.execution, card, accent),
+            const SizedBox(height: 8),
+            section(AppL.tips, info.tips, Colors.amber.withAlpha(dark ? 15 : 35), dark ? Colors.amber : Colors.brown.shade700),
+          ] else
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(12)),
+              child: Text(AppL.notInCatalog, style: TextStyle(color: muted, fontSize: 13), textAlign: TextAlign.center),
+            ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.pop(c);
+              final q = info?.nameEn ?? name;
+              if (kIsWeb) {
+                cercaEsercizioSuYoutube(q);
+              } else {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => YouTubeSearchView(esercizio: q)));
+              }
+            },
+            icon: const Icon(Icons.play_circle_outline_rounded, color: Colors.red),
+            label: Text(AppL.watchOnYoutube, style: const TextStyle(color: Colors.red)),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: Colors.red.withAlpha(80)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Returns all category labels an exercise belongs to, derived from its
+/// primary [category] and its [muscleImages] list. Used by the browse screen
+/// so that e.g. a "petto" exercise with tricipiti.webp also appears under
+/// "braccia".
 
 bool usesQuarterStepIncrement(double valueKg) {
   final centiKg = (valueKg.abs() * 100).round();
@@ -2913,14 +3108,31 @@ class _ClientMainPageState extends State<ClientMainPage>
               padding: const EdgeInsets.fromLTRB(24, 10, 16, 8),
               child: Row(
                 children: [
-                  Container(
-                    width: 3,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      borderRadius: BorderRadius.circular(2),
+                  if (day.muscleImage != null)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(c);
+                        _showImageFullscreen(context, day.muscleImage!, day.dayName);
+                      },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.asset(
+                          muscleAssetPath(day.muscleImage),
+                          width: 52,
+                          height: 44,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 3,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -2939,147 +3151,81 @@ class _ClientMainPageState extends State<ClientMainPage>
                       _showDayDetail(day);
                     },
                     icon: const Icon(Icons.list_alt_rounded, size: 16),
-                    label: const Text('Esercizi'),
+                    label: Text(AppL.exercises),
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.white54,
+                      foregroundColor: _isDarkCtx(context) ? Colors.white54 : Colors.black54,
                     ),
                   ),
                 ],
               ),
             ),
             Divider(color: _isDarkCtx(context) ? Colors.white12 : Colors.black87.withAlpha(10), height: 1),
-            // Immagine muscolo (tap → fullscreen)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: day.muscleImage != null
-                  ? GestureDetector(
-                      onTap: () {
-                        Navigator.pop(c);
-                        _showImageFullscreen(
-                          context,
-                          day.muscleImage!,
-                          day.dayName,
-                        );
-                      },
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Image.asset(
-                          muscleAssetPath(day.muscleImage),
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(24, 16, 24, _bottomNavInset(c) + 24),
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.trending_up_rounded,
+                        color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        AppL.workoutProgress,
+                        style: TextStyle(
+                          color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
+                          fontSize: 11,
+                          letterSpacing: 1.2,
                         ),
                       ),
-                    )
-                  : day.bodyParts.isNotEmpty
-                  ? Center(
-                      child: Icon(kBodyPartIcons[day.bodyParts.first] ?? Icons.fitness_center_rounded, size: 60, color: Theme.of(context).colorScheme.primary),
-                    )
-                  : const SizedBox(height: 8),
-            ),
-            const SizedBox(height: 16),
-            // Titolo grafico
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.trending_up_rounded,
-                    color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                    size: 16,
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'ANDAMENTO ALLENAMENTO',
-                    style: TextStyle(
-                      color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                      fontSize: 11,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Grafico
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
-                child: SingleChildScrollView(
-                  child: _WorkoutProgressChart(
+                  const SizedBox(height: 8),
+                  _WorkoutProgressChart(
                     day: day,
                     history: history,
                     accent: accent,
                     usePounds: _stUsePounds,
                   ),
-                ),
-              ),
-            ),
-            // Share buttons
-            Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, _bottomNavInset(context) + 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        final exercises = _buildLastSessionExercises(day.dayName);
-                        final allNames = myRoutine.map((r) => r.dayName).toList();
-                        showModalBottomSheet(
-      useSafeArea: true,
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) => _WorkoutShareSheet(
-                            dayName: day.dayName,
-                            todayLabel: _todayLabel(),
-                            exercises: exercises,
-                            streak: _streak,
-                            accent: accent,
-                            streakDoneNames: _streakDone,
-                            allSessionNames: allNames,
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.share_rounded, size: 16),
-                      label: const Text('Condividi'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: accent,
-                        side: BorderSide(color: accent.withAlpha(80)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        final hist = history;
-                        final rout = myRoutine;
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => _OverallProgressPage(
-                              history: hist,
-                              routine: rout,
-                              streak: _streak,
-                              accent: accent,
-                              usePounds: _stUsePounds,
+                  if (!kIsWeb) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _shareLastSession(context, day),
+                            icon: const Icon(Icons.share_rounded, size: 16),
+                            label: Text(AppL.share),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: accent,
+                              side: BorderSide(color: accent.withAlpha(80)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
                             ),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.bar_chart_rounded, size: 16),
-                      label: const Text('Progressi'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF00BCD4),
-                        side: const BorderSide(color: Color(0x4400BCD4)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(c);
+                              _showOverallProgressPage();
+                            },
+                            icon: const Icon(Icons.bar_chart_rounded, size: 16),
+                            label: Text(AppL.progress),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: accent,
+                              side: BorderSide(color: accent.withAlpha(80)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -3144,244 +3290,20 @@ class _ClientMainPageState extends State<ClientMainPage>
   void _showDayDetail(WorkoutDay day) {
     final accent = Theme.of(context).colorScheme.primary;
     showModalBottomSheet(
-      useSafeArea: true,
       context: context,
       backgroundColor: _isDarkCtx(context) ? const Color(0xFF0E0E10) : Colors.white,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (c) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
-        child: Column(
-          children: [
-            // Handle bar
-            Padding(
-              padding: const EdgeInsets.only(top: 12, bottom: 4),
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: _isDarkCtx(context) ? Colors.white12 : Colors.black12,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 3,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      day.dayName.toUpperCase(),
-                      style: TextStyle(
-                        color: accent,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${day.exercises.length} esercizi',
-                    style: TextStyle(color: _isDarkCtx(context) ? Colors.white24 : Colors.black26, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            Divider(color: _isDarkCtx(context) ? Colors.white12 : Colors.black87.withAlpha(10), height: 1),
-            // Exercise list
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: day.exercises.length,
-                separatorBuilder: (_, __) => Divider(
-                  color: _isDarkCtx(context) ? Colors.white12 : Colors.black87.withAlpha(8),
-                  height: 1,
-                  indent: 24,
-                  endIndent: 24,
-                ),
-                itemBuilder: (ctx, idx) {
-                  final ex = day.exercises[idx];
-                  final scheme = _repsSchemeText(ex);
-                  final isSuperset = ex.supersetGroup > 0;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    child: Row(
-                      children: [
-                        // YouTube button
-                        InkWell(
-                          borderRadius: BorderRadius.circular(22),
-                          onTap: () {
-                            if (kIsWeb) {
-                              cercaEsercizioSuYoutube(ex.name);
-                            } else {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      YouTubeSearchView(esercizio: ex.name),
-                                ),
-                              );
-                            }
-                          },
-                          child: Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: Colors.red.withAlpha(18),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.red.withAlpha(40),
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.play_arrow_rounded,
-                              color: Colors.red,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Exercise info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  if (isSuperset)
-                                    Container(
-                                      margin: const EdgeInsets.only(right: 6),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 5,
-                                        vertical: 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.deepPurple.withAlpha(80),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: Colors.deepPurple.withAlpha(
-                                            100,
-                                          ),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        'S${ex.supersetGroup}',
-                                        style: const TextStyle(
-                                          fontSize: 9,
-                                          color: Colors.purpleAccent,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  Expanded(
-                                    child: InkWell(
-                                      onTap: () =>
-                                          _showExerciseDetail(context, ex),
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: Text(
-                                        ex.name,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                          color: _isDarkCtx(context) ? Colors.white : Colors.black87,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                scheme,
-                                style: TextStyle(
-                                  color: _isDarkCtx(context) ? Colors.white : Colors.black87.withAlpha(100),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Chart button
-                        InkWell(
-                          borderRadius: BorderRadius.circular(22),
-                          onTap: () {
-                            _showGraph(ex.name);
-                          },
-                          child: Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: accent.withAlpha(18),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: accent.withAlpha(40)),
-                            ),
-                            child: Icon(
-                              Icons.insights_rounded,
-                              color: accent,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showExerciseDetail(BuildContext ctx, ExerciseConfig ex) {
-    final accent = Theme.of(ctx).colorScheme.primary;
-    // Le info seguono la GIF (se presente), altrimenti il nome
-    final info =
-        (ex.gifFilename != null ? findByGifSlug(ex.gifFilename!) : null) ??
-        findAnyExercise(ex.name);
-    final gifPath = ex.gifFilename != null
-        ? exerciseAnimationAssetPath(ex.gifFilename!)
-        : info != null
-        ? exerciseAnimationAssetPath(info.gifSlug)
-        : null;
-
-    showModalBottomSheet(
-      useSafeArea: true,
-      context: ctx,
-      backgroundColor: _isDarkCtx(context) ? const Color(0xFF0E0E10) : Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (c) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (_, scrollCtrl) => ListView(
-          controller: scrollCtrl,
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-          children: [
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+      builder: (c) => StatefulBuilder(
+        builder: (ctx2, setSheet) => Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          child: Column(
+            children: [
+              // Handle bar
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 4),
                 child: Container(
                   width: 36,
                   height: 4,
@@ -3391,272 +3313,149 @@ class _ClientMainPageState extends State<ClientMainPage>
                   ),
                 ),
               ),
-            ),
-            Row(
-              children: [
-                Container(
-                  width: 3,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: accent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    ex.name.toUpperCase(),
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 3,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            if (info != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                info.nameEn,
-                style: TextStyle(
-                  color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            // GIF esercizio
-            if (gifPath != null)
-              Image.asset(
-                gifPath,
-                width: 280,
-                height: 280,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.fitness_center,
-                  size: 80,
-                  color: Colors.white30,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        day.dayName.toUpperCase(),
+                        style: TextStyle(
+                          color: accent,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${day.exercises.length} ${AppL.exercises.toLowerCase()}',
+                      style: TextStyle(
+                        color: _isDarkCtx(context) ? Colors.white24 : Colors.black26,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            const SizedBox(height: 16),
-            if (info != null && info.muscleImages.isNotEmpty)
-              SizedBox(
-                height: 80,
+              Divider(color: _isDarkCtx(context) ? Colors.white12 : Colors.black87.withAlpha(10), height: 1),
+              // Exercise list
+              Expanded(
                 child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: info.muscleImages.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) => ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(
-                      muscleAssetPath(info.muscleImages[i]),
-                      width: 100,
-                      height: 80,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ),
-            if (info != null && info.muscleImages.isNotEmpty)
-              const SizedBox(height: 16),
-            if (info != null) ...[
-              _infoTile(
-                Icons.fitness_center_rounded,
-                'MUSCOLO PRINCIPALE',
-                info.primaryMuscle,
-                accent,
-              ),
-              if (info.secondaryMuscles.isNotEmpty)
-                _infoTile(
-                  Icons.grain_rounded,
-                  'MUSCOLI SECONDARI',
-                  info.secondaryMuscles,
-                  _isDarkCtx(context) ? Colors.white54 : Colors.black54,
-                ),
-              const SizedBox(height: 12),
-              _sectionCard(
-                'ESECUZIONE',
-                info.execution,
-                _isDarkCtx(context) ? const Color(0xFF1C1C1E) : Colors.grey.shade100,
-              ),
-              const SizedBox(height: 8),
-              _sectionCard(
-                'CONSIGLI',
-                info.tips,
-                Colors.amber.withAlpha(15),
-              ),
-            ] else
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _isDarkCtx(context) ? Colors.white.withAlpha(5) : Colors.black87.withAlpha(5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Esercizio non in catalogo.\nUsa YouTube per vedere la tecnica.',
-                  style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            const SizedBox(height: 16),
-            Divider(color: _isDarkCtx(context) ? Colors.white12 : Colors.black12),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _statChip(
-                  '${ex.targetSets} serie',
-                  Icons.repeat_rounded,
-                  accent,
-                ),
-                const SizedBox(width: 8),
-                _statChip(
-                  '${ex.repsList.isNotEmpty ? ex.repsList.join('-') : '?'} reps',
-                  Icons.numbers_rounded,
-                  accent,
-                ),
-                if (ex.recoveryTime > 0) ...[
-                  const SizedBox(width: 8),
-                  _statChip(
-                    '${ex.recoveryTime}s riposo',
-                    Icons.timer_outlined,
-                    Colors.white38,
-                  ),
-                ],
-              ],
-            ),
-          if (ex.notePT.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withAlpha(20),
-                  borderRadius: BorderRadius.circular(10),
-                  border: const Border(
-                    left: BorderSide(color: Colors.amber, width: 3),
-                  ),
-                ),
-                child: Text(
-                  'NOTE COACH: ${ex.notePT}',
-                  style: const TextStyle(color: Colors.amber, fontSize: 13),
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pop(c);
-                  if (kIsWeb) {
-                    cercaEsercizioSuYoutube(info?.nameEn ?? ex.name);
-                  } else {
-                    Navigator.push(
-                      ctx,
-                      MaterialPageRoute(
-                        builder: (_) => YouTubeSearchView(
-                          esercizio: info?.nameEn ?? ex.name,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: day.exercises.length,
+                  separatorBuilder: (_, i) {
+                    final g = day.exercises[i].supersetGroup;
+                    // superset: niente divisore, la barra viola unisce le righe
+                    if (g > 0 && i + 1 < day.exercises.length && day.exercises[i + 1].supersetGroup == g) {
+                      return const SizedBox.shrink();
+                    }
+                    return Divider(
+                      color: _isDarkCtx(context) ? Colors.white12 : Colors.black87.withAlpha(8),
+                      height: 1,
+                      indent: 24,
+                      endIndent: 24,
+                    );
+                  },
+                  itemBuilder: (ctx, idx) {
+                    final ex = day.exercises[idx];
+                    final dark = _isDarkCtx(context);
+                    final gif = exerciseGifPath(ex.name, ex.gifFilename);
+                    return InkWell(
+                      onTap: () => showExerciseDetail(context, name: ex.name, gifFilename: ex.gifFilename, ex: ex),
+                      child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Container(
+                              width: 4,
+                              margin: const EdgeInsets.only(left: 8),
+                              color: ex.supersetGroup > 0 ? Colors.deepPurpleAccent : Colors.transparent,
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+                                child: Row(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        width: 52,
+                                        height: 52,
+                                        color: dark ? const Color(0xFF1C1C1E) : const Color(0xFFF4F4F6),
+                                        child: gif == null
+                                            ? Icon(Icons.fitness_center_rounded, size: 22, color: dark ? Colors.white24 : Colors.black26)
+                                            : Image.asset(
+                                                gif,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            ex.name,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                              color: dark ? Colors.white : Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            _repsSchemeText(ex),
+                                            style: TextStyle(color: dark ? Colors.white60 : Colors.black54, fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(22),
+                                      onTap: () => _showGraph(ex.name),
+                                      child: Container(
+                                        width: 38,
+                                        height: 38,
+                                        decoration: BoxDecoration(
+                                          color: accent.withAlpha(18),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: accent.withAlpha(40)),
+                                        ),
+                                        child: Icon(Icons.insights_rounded, color: accent, size: 18),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
-                  }
-                },
-                icon: const Icon(
-                  Icons.play_circle_outline_rounded,
-                  color: Colors.red,
-                ),
-                label: const Text(
-                  'Guarda su YouTube',
-                  style: TextStyle(color: Colors.red),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Colors.red.withAlpha(80)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  },
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
-
-  Widget _infoTile(IconData icon, String label, String value, Color color) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 6),
-            Text(
-              '$label: ',
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Expanded(
-              child: Text(value, style: TextStyle(color: color, fontSize: 12)),
-            ),
-          ],
-        ),
-      );
-
-  Widget _sectionCard(String title, String body, Color bg) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: bg,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: _isDarkCtx(context) ? Colors.white54 : Colors.black54,
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          body,
-          style: TextStyle(
-            color: _isDarkCtx(context) ? Colors.white : Colors.black87,
-            fontSize: 13,
-            height: 1.5,
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _statChip(String label, IconData icon, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    decoration: BoxDecoration(
-      color: color.withAlpha(20),
-      border: Border.all(color: color.withAlpha(60)),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 13, color: color),
-        const SizedBox(width: 4),
-        Text(label, style: TextStyle(color: color, fontSize: 11)),
-      ],
-    ),
-  );
 
   void _showGraph(String name) {
     final accent = Theme.of(context).colorScheme.primary;
@@ -3718,64 +3517,6 @@ class _ClientMainPageState extends State<ClientMainPage>
     if (reps.every((r) => r == reps.first))
       return '${reps.length}×${reps.first}';
     return reps.join('–');
-  }
-
-  Widget _exPreviewRow(
-    String name,
-    String scheme,
-    Color accent,
-    bool isSuperset,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: isSuperset ? 8 : 6,
-            height: isSuperset ? 8 : 6,
-            margin: EdgeInsets.only(right: 10, top: isSuperset ? 3 : 4),
-            decoration: BoxDecoration(
-              color: isSuperset ? accent : accent.withAlpha(180),
-              shape: isSuperset ? BoxShape.rectangle : BoxShape.circle,
-              borderRadius: isSuperset ? BorderRadius.circular(2) : null,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              '$name  •  $scheme',
-              style: TextStyle(
-                color: isSuperset ? (_isDarkCtx(context) ? Colors.white70 : Colors.black87) : (_isDarkCtx(context) ? Colors.white60 : Colors.black54),
-                fontSize: 13,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExPreviewList(WorkoutDay d, Color accent) {
-    final List<Widget> items = [];
-    final Set<int> processedGroups = {};
-    for (final ex in d.exercises) {
-      if (ex.supersetGroup == 0) {
-        items.add(_exPreviewRow(ex.name, _repsSchemeText(ex), accent, false));
-      } else {
-        if (!processedGroups.contains(ex.supersetGroup)) {
-          processedGroups.add(ex.supersetGroup);
-          final group = d.exercises
-              .where((e) => e.supersetGroup == ex.supersetGroup)
-              .toList();
-          final names = group.map((e) => e.name).join(' + ');
-          final schemes = group.map((e) => _repsSchemeText(e)).join(' / ');
-          items.add(_exPreviewRow(names, schemes, accent, true));
-        }
-      }
-    }
-    return Column(children: items);
   }
 
   DateTime? _lastTrainedDate(WorkoutDay day) =>
@@ -4059,13 +3800,24 @@ class _ClientMainPageState extends State<ClientMainPage>
             Icon(Icons.fitness_center, color: accent.withAlpha(80), size: 64),
             const SizedBox(height: 16),
             Text(
-              'Nessuna scheda caricata',
+              AppL.noScheduleLoaded,
               style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 16),
             ),
             const SizedBox(height: 8),
             Text(
               'Importa una scheda dal tuo Coach',
               style: TextStyle(color: _isDarkCtx(context) ? Colors.white24 : Colors.black26, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              onPressed: _importaSchedaDaFile,
+              icon: const Icon(Icons.file_open_outlined, size: 18),
+              label: const Text('IMPORTA SCHEDA'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: accent,
+                side: BorderSide(color: accent.withAlpha(120)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
             ),
           ],
         ),
@@ -4092,7 +3844,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      'ALLENATI',
+                      AppL.train2,
                       style: TextStyle(
                         color: accent,
                         fontSize: 22,
@@ -4104,7 +3856,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Scegli e inizia il tuo allenamento',
+                  AppL.chooseAndStart,
                   style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 13),
                 ),
                 if (myRoutine.isNotEmpty) ...[
@@ -4123,7 +3875,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                         border: Border.all(
                           color: _streak > 0
                               ? const Color(0xFFFF6B00).withAlpha(80)
-                              : (_isDarkCtx(context) ? Colors.white12 : Colors.black12),
+                              : Colors.white12,
                         ),
                       ),
                       child: LayoutBuilder(
@@ -4220,10 +3972,8 @@ class _ClientMainPageState extends State<ClientMainPage>
                                           const SizedBox(width: 2),
                                           Text(
                                             '$_streak',
-                                            style: TextStyle(
-                                              color: _streak > 0
-                                                  ? Colors.orange
-                                                  : Colors.white24,
+                                            style: const TextStyle(
+                                              color: Colors.orange,
                                               fontSize: 30,
                                               fontWeight: FontWeight.w900,
                                               height: 1.0,
@@ -4232,9 +3982,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                                         ],
                                       ),
                                       Text(
-                                        _streak == 1
-                                            ? 'micro'
-                                            : 'micro',
+                                        _streak == 1 ? AppL.streakUnitSingle : AppL.streakUnitPlural,
                                         style: TextStyle(
                                           color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
                                           fontSize: 10,
@@ -4274,7 +4022,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                                     Icon(Icons.local_fire_department_rounded, size: 16, color: Colors.orange),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '$_streak ${_streak == 1 ? 'micro' : 'micro'}',
+                                      '$_streak ${_streak == 1 ? AppL.streakUnitSingle : AppL.streakUnitPlural}',
                                       style: const TextStyle(
                                         color: Colors.orange,
                                         fontSize: 13,
@@ -4322,181 +4070,76 @@ class _ClientMainPageState extends State<ClientMainPage>
             delegate: SliverChildBuilderDelegate((_, i) {
               final d = myRoutine[i];
               final label = _lastTrainedLabel(d);
-              final isToday = label == 'Oggi';
+              final isToday = label == AppL.today;
               final isSuggested = d.dayName == suggestedName;
+              final dark = _isDarkCtx(context);
+              final muted = dark ? Colors.white38 : Colors.black38;
+              // ponytail: card a una riga, tutta la card avvia; niente elenco esercizi (sta nel dettaglio)
               return GestureDetector(
                 onTap: () => _startWorkout(d),
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 16),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
                   decoration: BoxDecoration(
-                    color: _isDarkCtx(context) ? const Color(0xFF111113) : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    color: dark ? const Color(0xFF111113) : Colors.white,
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: isSuggested
-                          ? accent.withAlpha(120)
-                          : (_isDarkCtx(context) ? Colors.white.withAlpha(15) : Colors.black12),
+                      color: isSuggested ? accent.withAlpha(120) : (dark ? Colors.white.withAlpha(15) : Colors.black12),
                       width: isSuggested ? 1.5 : 1,
                     ),
-                    boxShadow: isSuggested
-                        ? [
-                            BoxShadow(
-                              color: accent.withAlpha(40),
-                              blurRadius: 16,
-                              spreadRadius: 0,
-                            ),
-                          ]
-                        : null,
+                    boxShadow: isSuggested ? [BoxShadow(color: accent.withAlpha(40), blurRadius: 16)] : null,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      // Top: nome + badge "ultimo allenamento"
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              color: _isDarkCtx(context) ? Colors.white12 : Colors.black87.withAlpha(10),
-                            ),
-                          ),
-                        ),
-                        child: Row(
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    d.dayName.toUpperCase(),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
-                                    style: TextStyle(
-                                      color: isSuggested ? accent : (_isDarkCtx(context) ? Colors.white : Colors.black87),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.fitness_center,
-                                        size: 12,
-                                        color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          '${d.exercises.length} esercizi',
-                                          overflow: TextOverflow.ellipsis,
-                                          maxLines: 1,
-                                          style: TextStyle(
-                                            color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Icon(
-                                        Icons.repeat,
-                                        size: 12,
-                                        color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          '${d.exercises.fold(0, (s, ex) => s + ex.targetSets)} serie',
-                                          overflow: TextOverflow.ellipsis,
-                                          maxLines: 1,
-                                          style: TextStyle(
-                                            color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                            Text(
+                              d.dayName.toUpperCase(),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: TextStyle(
+                                color: isSuggested ? accent : (dark ? Colors.white : Colors.black87),
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1,
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isToday
-                                    ? accent.withAlpha(30)
-                                    : (_isDarkCtx(context) ? Colors.white.withAlpha(10) : Colors.black.withAlpha(8)),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isToday
-                                      ? accent.withAlpha(120)
-                                      : (_isDarkCtx(context) ? Colors.white12 : Colors.black12),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    isToday
-                                        ? Icons.check_circle
-                                        : Icons.history,
-                                    size: 12,
-                                    color: isToday ? accent : (_isDarkCtx(context) ? Colors.white38 : Colors.black38),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
+                            const SizedBox(height: 4),
+                            Text(
+                              '${d.exercises.length} ${AppL.exercises.toLowerCase()} · ${d.exercises.fold(0, (s, ex) => s + ex.targetSets)} ${AppL.sets.toLowerCase()}',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: TextStyle(color: muted, fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(isToday ? Icons.check_circle : Icons.history, size: 12, color: isToday ? accent : muted),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
                                     label,
-                                    style: TextStyle(
-                                      color: isToday ? accent : (_isDarkCtx(context) ? Colors.white38 : Colors.black38),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: TextStyle(color: isToday ? accent : muted, fontSize: 11, fontWeight: FontWeight.w600),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                      // Exercise preview list
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                        child: _buildExPreviewList(d, accent),
-                      ),
-                      // CTA button
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _startWorkout(d),
-                            icon: const Icon(
-                              Icons.play_arrow_rounded,
-                              size: 22,
-                            ),
-                            label: const Text(
-                              'ALLENATI ORA',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: accent,
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: isSuggested ? accent : accent.withAlpha(30),
+                          shape: BoxShape.circle,
                         ),
+                        child: Icon(Icons.play_arrow_rounded, size: 28, color: isSuggested ? Colors.black : accent),
                       ),
                     ],
                   ),
@@ -4506,6 +4149,40 @@ class _ClientMainPageState extends State<ClientMainPage>
           ),
         ),
       ],
+    );
+  }
+
+  // Cliente: avanzamento complessivo e condivisione (gym li ha come helper, qui senza pubblicità)
+  void _showOverallProgressPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _OverallProgressPage(
+          history: history,
+          routine: myRoutine,
+          streak: _streak,
+          accent: appAccentNotifier.value,
+          usePounds: _stUsePounds,
+        ),
+      ),
+    );
+  }
+
+  void _shareLastSession(BuildContext ctx, WorkoutDay day) {
+    showModalBottomSheet(
+      useSafeArea: true,
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _WorkoutShareSheet(
+        dayName: day.dayName,
+        todayLabel: _todayLabel(),
+        exercises: _buildLastSessionExercises(day.dayName),
+        streak: _streak,
+        accent: appAccentNotifier.value,
+        streakDoneNames: _streakDone,
+        allSessionNames: myRoutine.map((r) => r.dayName).toList(),
+      ),
     );
   }
 }
@@ -6911,238 +6588,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
       ),
     );
   }
-  void _showCatalogDetail(String exName, {String? gifFilename}) {
-    if (exName.isEmpty) return;
-    final accent = Theme.of(context).colorScheme.primary;
-    // Se c'è una GIF assegnata, le info seguono la GIF (muscoli/esecuzione dalla GIF)
-    // Solo se la GIF non ha info si fa fallback sul nome
-    final info =
-        (gifFilename != null ? findByGifSlug(gifFilename) : null) ??
-        findAnyExercise(exName);
-    final gifPath = gifFilename != null
-        ? exerciseAnimationAssetPath(gifFilename)
-        : info != null
-        ? exerciseAnimationAssetPath(info.gifSlug)
-        : null;
-
-    showModalBottomSheet(
-      useSafeArea: true,
-      context: context,
-      backgroundColor: _isDarkCtx(context) ? const Color(0xFF0E0E10) : Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (c) => DraggableScrollableSheet(
-        initialChildSize: 0.75,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (_, scrollCtrl) => ListView(
-          controller: scrollCtrl,
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-          children: [
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: _isDarkCtx(context) ? Colors.white12 : Colors.black12,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ),
-            Row(
-              children: [
-                Container(
-                  width: 3,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: accent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    (info?.nameEn ?? exName).toUpperCase(),
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (info != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                info.nameEn,
-                style: TextStyle(
-                  color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // GIF esercizio
-              if (gifPath != null)
-                Image.asset(
-                  gifPath,
-                  width: 280,
-                  height: 280,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.fitness_center,
-                    size: 80,
-                    color: Colors.white30,
-                  ),
-                ),
-              const SizedBox(height: 16),
-              if (info.muscleImages.isNotEmpty) ...[
-                SizedBox(
-                  height: 80,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: info.muscleImages.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (_, i) => ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.asset(
-                        muscleAssetPath(info.muscleImages[i]),
-                        width: 100,
-                        height: 80,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: _isDarkCtx(context) ? Colors.white.withAlpha(7) : Colors.black87.withAlpha(7),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _isDarkCtx(context) ? Colors.white10 : Colors.black12),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.fitness_center_rounded, size: 16, color: accent),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'MUSCOLO PRINCIPALE',
-                            style: TextStyle(
-                              color: accent.withAlpha(180),
-                              fontSize: 10,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            info.primaryMuscle,
-                            style: TextStyle(
-                              color: _isDarkCtx(context) ? Colors.white : Colors.black87,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                decoration: BoxDecoration(
-                  color: _isDarkCtx(context) ? const Color(0xFF1C1C1E) : Colors.black12.withAlpha(10),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ESECUZIONE',
-                      style: TextStyle(
-                        color: accent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      info.execution,
-                      style: TextStyle(
-                        color: _isDarkCtx(context) ? Colors.white : Colors.black87,
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withAlpha(15),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'CONSIGLI',
-                      style: TextStyle(
-                        color: Colors.amber,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      info.tips,
-                      style: TextStyle(
-                        color: _isDarkCtx(context) ? Colors.white : Colors.black87,
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _isDarkCtx(context) ? Colors.white.withAlpha(5) : Colors.black87.withAlpha(5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Esercizio non in catalogo.',
-                  style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildRestUI() {
     var ex = widget.day.exercises[exI];
     var suggest = _getSuggest(ex.name, setN);
@@ -7241,10 +6686,15 @@ class _WorkoutEngineState extends State<WorkoutEngine>
             ),
 
             // ── METÀ INFERIORE: suggerimenti + skip ────────────────────
+            // scrollabile: con la pubblicità da 260px su schermo piccolo andava in overflow
             Expanded(
-              child: Padding(
+              child: LayoutBuilder(
+                builder: (ctx, box) => SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
-                child: Column(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: box.maxHeight - 16),
+                  child: IntrinsicHeight(
+                  child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     // Navigazione esercizio durante riposo inter-esercizio - solo prima della prima serie
@@ -7299,9 +6749,11 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                     // Card prossimo esercizio
                     GestureDetector(
                       onTap: _prossimoNome.isNotEmpty
-                          ? () => _showCatalogDetail(
-                              _prossimoNome,
+                          ? () => showExerciseDetail(
+                              context,
+                              name: _prossimoNome,
                               gifFilename: prossimoConfig?.gifFilename,
+                              ex: prossimoConfig,
                             )
                           : null,
                       child: Container(
@@ -7425,7 +6877,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                           borderRadius: BorderRadius.circular(50),
                         ),
                         child: Text(
-                          'SKIP',
+                          AppL.skip.toUpperCase(),
                           style: TextStyle(
                             letterSpacing: 3,
                             fontWeight: FontWeight.w600,
@@ -7436,6 +6888,9 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                       ),
                     ),
                   ],
+                  ),
+                  ),
+                ),
                 ),
               ),
             ),
@@ -7444,7 +6899,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
       ),
     );
   }
-
   // Suggerisce peso/reps dalla SESSIONE PRECEDENTE (snapshot _previousResults
   // catturato a initState) — non dalla sessione corrente in corso.
   Map<String, dynamic> _getSuggest(String ex, int s) {
@@ -9873,26 +9327,6 @@ class _OverallProgressPageState extends State<_OverallProgressPage> {
     return out;
   }
 
-  /// Volume (peso × ripetizioni) delle ultime 8 settimane, lunedì → domenica.
-  List<(DateTime, double)> _weeklyVolume() {
-    final now = DateTime.now();
-    final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
-    final weeks = List.generate(8, (i) => DateTime(monday.year, monday.month, monday.day - 7 * (7 - i)));
-    final vol = List.filled(8, 0.0);
-    for (final h in widget.history) {
-      if (h is! Map) continue;
-      if (_filterDay != null && h['dayName'] != _filterDay) continue;
-      final d = DateTime.tryParse('${h['date']}');
-      if (d == null) continue;
-      final i = weeks.lastIndexWhere((w) => !DateTime(d.year, d.month, d.day).isBefore(w));
-      if (i < 0) continue;
-      for (final s in (h['series'] as List?) ?? const []) {
-        vol[i] += ((s['w'] ?? 0) as num).toDouble() * ((s['r'] ?? 0) as num).toDouble();
-      }
-    }
-    return [for (int i = 0; i < 8; i++) (weeks[i], widget.usePounds ? kgToLb(vol[i]) : vol[i])];
-  }
-
   void _openExercise(String name) {
     showModalBottomSheet(
       context: context,
@@ -9957,7 +9391,6 @@ class _OverallProgressPageState extends State<_OverallProgressPage> {
     final unit = widget.usePounds ? 'lb' : 'kg';
     final allPoints = _computePoints();
     final trends = _exerciseTrends();
-    final weeks = _weeklyVolume();
     final dayNames = widget.routine.map((d) => d.dayName).toList();
     final n = allPoints.length;
     final sel = n == 0 ? 0 : (_sel ?? n - 1).clamp(0, n - 1);
@@ -10022,59 +9455,6 @@ class _OverallProgressPageState extends State<_OverallProgressPage> {
               ),
           ]),
         ],
-      );
-    }
-
-    Widget volume() {
-      final maxV = weeks.fold(0.0, (a, w) => w.$2 > a ? w.$2 : a);
-      String f(double v) => v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}k' : v.toStringAsFixed(0);
-      return SizedBox(
-        height: 140,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            for (int i = 0; i < weeks.length; i++)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          weeks[i].$2 > 0 ? f(weeks[i].$2) : '',
-                          style: TextStyle(
-                            color: i == weeks.length - 1 ? accent : muted,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        height: maxV > 0 ? 90 * weeks[i].$2 / maxV : 0,
-                        constraints: const BoxConstraints(minHeight: 3),
-                        decoration: BoxDecoration(
-                          color: i == weeks.length - 1 ? accent : accent.withAlpha(90),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          '${weeks[i].$1.day}/${weeks[i].$1.month}',
-                          style: TextStyle(color: muted, fontSize: 9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
       );
     }
 
@@ -10195,7 +9575,6 @@ class _OverallProgressPageState extends State<_OverallProgressPage> {
                             : AppL.progressPerSession,
                         chart(),
                       ),
-                      section('${AppL.weeklyVolume} ($unit)', volume()),
                       if (trends.isNotEmpty) section(AppL.exercises, exercises()),
                         OutlinedButton.icon(
                           icon: const Icon(Icons.share_rounded),
@@ -10216,7 +9595,6 @@ class _OverallProgressPageState extends State<_OverallProgressPage> {
       ),
     );
   }
-
   Widget _filterChip({
     required String label,
     required bool selected,

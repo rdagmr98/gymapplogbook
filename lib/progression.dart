@@ -131,3 +131,44 @@ double setScore(num w, num r) => w > 0 ? w * (1 + r / 300) : r.toDouble();
   }
   return best;
 }
+
+/// Giorni rinominati tra la scheda di prima e quella nuova ({giorno: nomi esercizi}): un giorno sparito
+/// e uno nuovo con almeno metà degli esercizi in comune (contando il più corto) sono lo stesso allenamento.
+/// Ritorna {vecchio: nuovo}, così storico e microciclo seguono il nome nuovo.
+Map<String, String> renamedDays(Map<String, Set<String>> before, Map<String, Set<String>> after) {
+  String k(String s) => s.trim().toLowerCase();
+  final oldKeys = {for (final d in before.keys) k(d)};
+  final newKeys = {for (final d in after.keys) k(d)};
+  final out = <String, String>{};
+  for (final n in after.entries) {
+    if (oldKeys.contains(k(n.key))) continue;
+    String? best;
+    var bestC = 0;
+    for (final o in before.entries) {
+      if (newKeys.contains(k(o.key)) || out.containsKey(o.key)) continue;
+      final c = o.value.intersection(n.value).length;
+      final shorter = o.value.length < n.value.length ? o.value.length : n.value.length;
+      if (c > bestC && c * 2 >= shorter) {
+        best = o.key;
+        bestC = c;
+      }
+    }
+    if (best != null) out[best] = n.key;
+  }
+  return out;
+}
+
+/// Applica [renamedDays] al campo `dayName` delle voci di storico. Ritorna quante ne ha cambiate.
+int renameDaysInHistory(Iterable history, Map<String, String> renamed) {
+  final m = {for (final e in renamed.entries) e.key.trim().toLowerCase(): e.value};
+  var n = 0;
+  for (final h in history) {
+    final dn = h is Map ? h['dayName'] : null;
+    final to = dn is String ? m[dn.trim().toLowerCase()] : null;
+    if (to != null) {
+      h['dayName'] = to;
+      n++;
+    }
+  }
+  return n;
+}

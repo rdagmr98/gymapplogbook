@@ -132,6 +132,9 @@ class AppL {
     'screenAlwaysOn': {'it': 'Schermo sempre acceso', 'en': 'Screen always on', 'es': 'Pantalla siempre encendida', 'pt': 'Tela sempre ligada', 'fr': 'Écran toujours allumé', 'de': 'Bildschirm immer an', 'el': 'Οθόνη πάντα ανοιχτή', 'ar': 'الشاشة دائماً مضاءة', 'pl': 'Ekran zawsze włączony', 'ro': 'Ecran mereu activ', 'hu': 'Képernyő mindig bekapcsolva'},
     'confirmSeriesWindow': {'it': 'Finestra di conferma serie', 'en': 'Set confirmation window', 'es': 'Ventana de confirmación de serie', 'pt': 'Janela de confirmação da série', 'fr': 'Fenêtre de confirmation du set', 'de': 'Satz-Bestätigungsfenster', 'el': 'Παράθυρο επιβεβαίωσης σετ', 'ar': 'نافذة تأكيد المجموعة', 'pl': 'Okno potwierdzenia serii', 'ro': 'Fereastra de confirmare a setului', 'hu': 'Sorozat-megerősítési ablak'},
     'weightSuggestion': {'it': 'Suggerimento aumento peso', 'en': 'Weight increase suggestion', 'es': 'Sugerencia aumento de peso', 'pt': 'Sugestão de aumento de peso', 'fr': 'Suggestion d\'augmentation du poids', 'de': 'Gewichtserhöhungsvorschlag', 'el': 'Πρόταση αύξησης βάρους', 'ar': 'اقتراح زيادة الوزن', 'pl': 'Sugestia zwiększenia ciężaru', 'ro': 'Sugestie creștere greutate', 'hu': 'Súlynövelési javaslat'},
+    'progressionMode': {'it': 'Progressione sulla ruota', 'en': 'Progression on the wheel', 'es': 'Progresión en la rueda', 'pt': 'Progressão na roda', 'fr': 'Progression sur la roue', 'de': 'Progression am Rad', 'el': 'Πρόοδος στον τροχό', 'ar': 'التدرج على العجلة', 'pl': 'Progresja na kółku', 'ro': 'Progresie pe roată', 'hu': 'Progresszió a keréken'},
+    'progPreset': {'it': 'Impostata', 'en': 'Preset', 'es': 'Fijada', 'pt': 'Definida', 'fr': 'Réglée', 'de': 'Vorgabe', 'el': 'Έτοιμη', 'ar': 'جاهزة', 'pl': 'Ustawiona', 'ro': 'Setată', 'hu': 'Beállítva'},
+    'progNudge': {'it': 'Suggerita', 'en': 'Hint', 'es': 'Sugerida', 'pt': 'Sugerida', 'fr': 'Suggérée', 'de': 'Hinweis', 'el': 'Πρόταση', 'ar': 'اقتراح', 'pl': 'Podpowiedź', 'ro': 'Sugerată', 'hu': 'Javaslat'},
     'dataManagement': {'it': 'Gestione Dati', 'en': 'Data Management', 'es': 'Gestión de Datos', 'pt': 'Gestão de Dados', 'fr': 'Gestion des Données', 'de': 'Datenverwaltung', 'el': 'Διαχείριση Δεδομένων', 'ar': 'إدارة البيانات', 'pl': 'Zarządzanie Danymi', 'ro': 'Gestionarea Datelor', 'hu': 'Adatkezelés'},
     'insertKg': {'it': 'Inserisci KG', 'en': 'Enter KG', 'es': 'Ingresa KG', 'pt': 'Insira KG', 'fr': 'Entrez KG', 'de': 'KG eingeben', 'el': 'Εισάγετε KG', 'ar': 'أدخل KG', 'pl': 'Wpisz KG', 'ro': 'Introdu KG', 'hu': 'Adj meg KG-t'},
     'insertReps': {'it': 'Inserisci REPS', 'en': 'Enter REPS', 'es': 'Ingresa REPS', 'pt': 'Insira REPS', 'fr': 'Entrez REPS', 'de': 'WDHL eingeben', 'el': 'Εισάγετε ΕΠΑΝ.', 'ar': 'أدخل التكرارات', 'pl': 'Wpisz POWTÓRZENIA', 'ro': 'Introdu REP.', 'hu': 'Adj meg ISM.-t'},
@@ -440,6 +443,9 @@ class AppL {
   static String get screenAlwaysOn => _t('screenAlwaysOn');
   static String get confirmSeriesWindow => _t('confirmSeriesWindow');
   static String get weightSuggestion => _t('weightSuggestion');
+  static String get progressionMode => _t('progressionMode');
+  static String get progPreset => _t('progPreset');
+  static String get progNudge => _t('progNudge');
   static String get dataManagement => _t('dataManagement');
   static String get insertKg => _t('insertKg');
   static String get insertReps => _t('insertReps');

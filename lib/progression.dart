@@ -51,7 +51,9 @@ double weightStep(Iterable history, String exercise) {
   for (var i = 1; i < l.length; i++) {
     if (l[i] - l[i - 1] < step) step = l[i] - l[i - 1];
   }
-  return step.isFinite ? step.clamp(0.5, 10.0) : 2.5;
+  // ponytail: tetto 5 kg: con pochi pesi diversi nello storico (70 e 80) il salto più piccolo era 10 e proponeva +14%;
+  // un attrezzo con salti davvero più grandi si corregge a mano sulla ruota.
+  return step.isFinite ? step.clamp(0.5, 5.0) : 2.5;
 }
 
 /// Andamento di sessioni dello stesso allenamento, in ordine di data ({esercizio: punteggio serie migliore}):

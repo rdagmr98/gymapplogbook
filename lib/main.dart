@@ -1099,6 +1099,7 @@ class _ClientMainPageState extends State<ClientMainPage>
   bool _stAutoTimer = true;
   bool _stConfirmSeries = true;
   bool _stWeightHint = true;
+  bool _stProgPreset = true;
   bool _stUsePounds = false;
   bool _stDisableWeightKeyboard = false;
   bool _stDarkMode = true;
@@ -1764,6 +1765,16 @@ class _ClientMainPageState extends State<ClientMainPage>
                 _saveMainSettings();
               }),
               _mainSegmentSettingRow(
+                Icons.tune,
+                AppL.progressionMode,
+                selectedKey: _stProgPreset ? 'preset' : 'nudge',
+                options: {'preset': AppL.progPreset, 'nudge': AppL.progNudge},
+                onChanged: (value) {
+                  setState(() => _stProgPreset = value == 'preset');
+                  _saveMainSettings();
+                },
+              ),
+              _mainSegmentSettingRow(
                 Icons.straighten,
                 'Unità peso',
                 selectedKey: _stUsePounds ? 'lb' : 'kg',
@@ -2083,6 +2094,7 @@ class _ClientMainPageState extends State<ClientMainPage>
       _stAutoTimer = prefs.getBool('auto_start_timer') ?? true;
       _stConfirmSeries = prefs.getBool('confirm_series_enabled') ?? true;
       _stWeightHint = prefs.getBool('show_weight_suggestion') ?? true;
+      _stProgPreset = prefs.getBool('progression_preset') ?? true;
       _stUsePounds = prefs.getBool('use_pounds') ?? false;
       _stDisableWeightKeyboard =
           prefs.getBool('disable_weight_keyboard') ?? false;
@@ -2098,6 +2110,7 @@ class _ClientMainPageState extends State<ClientMainPage>
     await prefs.setBool('auto_start_timer', _stAutoTimer);
     await prefs.setBool('confirm_series_enabled', _stConfirmSeries);
     await prefs.setBool('show_weight_suggestion', _stWeightHint);
+    await prefs.setBool('progression_preset', _stProgPreset);
     await prefs.setBool('use_pounds', _stUsePounds);
     await prefs.setBool('disable_weight_keyboard', _stDisableWeightKeyboard);
     await prefs.setBool('dark_mode', _stDarkMode);
@@ -4432,6 +4445,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
   bool _autoStartTimer = true;
   bool _confirmSeriesEnabled = true;
   bool _showWeightSuggestion = true;
+  bool _progressionPreset = true; // ruota già sulla proposta, oppure sul peso della volta scorsa con il rimbalzo
   bool _displayInPounds = false;
   bool _disableWeightKeyboard = false;
   bool _awaitingFirstExerciseStart = true;
@@ -4482,6 +4496,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         _autoStartTimer = prefs.getBool('auto_start_timer') ?? true;
         _confirmSeriesEnabled = prefs.getBool('confirm_series_enabled') ?? true;
         _showWeightSuggestion = prefs.getBool('show_weight_suggestion') ?? true;
+        _progressionPreset = prefs.getBool('progression_preset') ?? true;
         _displayInPounds = prefs.getBool('use_pounds') ?? false;
         _disableWeightKeyboard =
             prefs.getBool('disable_weight_keyboard') ?? false;
@@ -6329,6 +6344,8 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     bool suggerisciReps = plan.provaReps != null;
     // ai pannelli serve il numero da mostrare in "prova N reps"
     final int targetR = plan.provaReps ?? plan.target;
+    // Impostata: la ruota parte dalla proposta. Suggerita: dal peso della volta scorsa e rimbalza finché non lo alzi.
+    final double startKg = _progressionPreset || lastR <= 0 ? plan.kg : lastW;
 
     bool isLastSet = (setN >= ex.targetSets);
     int timeToUse = isLastSet
@@ -6506,11 +6523,11 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                         Positioned.fill(
                           child: _DrumPickers(
                             key: ValueKey('drum_$exI'),
-                            initialKg: plan.kg,
+                            initialKg: startKg,
                             initialReps: plan.reps,
                             repsOnWeightUp: plan.target,
                             suggerisciAumento:
-                                suggerisciAumento && _showWeightSuggestion,
+                                plan.kg > startKg && _showWeightSuggestion,
                             useQuarterStep: _usesQuarterStepForExercise(ex, lastW),
                             useEvenStep: _usesEvenStepForExercise(ex, lastW),
                             useSingleStep: _usesSingleStepForExercise(ex, lastW),

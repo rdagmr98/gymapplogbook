@@ -2102,14 +2102,15 @@ class _ClientMainPageState extends State<ClientMainPage>
     });
     if (!kIsWeb) _updateWidgetData();
     if (!kIsWeb) _maybeStartWorkoutFromWidget();
-    _loadResume();
+    _loadResume(ask: true);
   }
 
   WorkoutDay? _resumeDay;
+  bool _resumeAsked = false; // avviso una volta per apertura
   int _resumeDone = 0;
 
   /// Allenamento lasciato a metà (snapshot sotto le 12 ore): lo mostra la card in cima a La mia scheda.
-  Future<void> _loadResume() async {
+  Future<void> _loadResume({bool ask = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
     WorkoutDay? day;
@@ -2133,6 +2134,35 @@ class _ClientMainPageState extends State<ClientMainPage>
       _resumeDay = day;
       _resumeDone = done;
     });
+    if (ask && day != null && !_resumeAsked && mounted) {
+      _resumeAsked = true;
+      _askResume(day, done);
+    }
+  }
+
+  // Allenamento lasciato a metà: avviso come la «Novità»; fuori dal dialog resta la card Riprendi.
+  Future<void> _askResume(WorkoutDay day, int done) async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        icon: Icon(Icons.play_circle_outline_rounded, color: appAccentNotifier.value),
+        title: Text(AppL.resumeWorkoutTitle, textAlign: TextAlign.center),
+        content: Text('${day.dayName} · $done/${day.exercises.length}\n\n${AppL.resumeWorkoutMsg}',
+            textAlign: TextAlign.center),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(AppL.resumeWorkoutNo)),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: Text(AppL.resumeWorkoutYes)),
+        ],
+      ),
+    );
+    if (!mounted || go == null) return;
+    if (go) {
+      _startWorkout(day, resume: true);
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('workout_in_progress_${day.dayName}');
+    if (mounted) setState(() => _resumeDay = null);
   }
 
   Future<void> _discardResume() async {
@@ -5922,6 +5952,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                 const SizedBox(height: 18),
                 _TapHere(
                   on: widget.demoMode,
+                  hint: AppL.demoGuideReady,
                   child: SizedBox(
                   width: double.infinity,
                   height: 54,
@@ -6534,6 +6565,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                                   );
                                 },
                             tapHint: widget.demoMode && _demoStep <= 2 ? _demoStep : 0,
+                            tapText: widget.demoMode ? _demoText() : null,
                             onKgInteraction: widget.demoMode && !_demoKg
                                 ? () => setState(() => _demoKg = true)
                                 : null,
@@ -6576,6 +6608,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                       height: 56,
                       child: _TapHere(
                         on: widget.demoMode && _demoStep == 3,
+                        hint: AppL.demoGuideConfirm,
                         child: ElevatedButton(
                           onPressed: _confermaSerie,
                           child: const Text("CONFERMA SERIE"),
@@ -7064,6 +7097,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                     _TapHere(
                       on: widget.demoMode,
                       radius: 50,
+                      hint: AppL.demoGuideRest,
                       child: GestureDetector(
                       onTap: _skipRest,
                       child: Container(
@@ -7134,45 +7168,22 @@ class _WorkoutEngineState extends State<WorkoutEngine>
       ? 2
       : 3;
 
+  String _demoText() => [
+        AppL.demoGuideReady,
+        AppL.demoGuideSet,
+        currentExSeries.isEmpty ? AppL.demoGuideReps : AppL.demoGuideNext,
+        AppL.demoGuideConfirm,
+        AppL.demoGuideRest,
+      ][_demoStep];
+
+  // il testo sta vicino a ciò che va toccato (_TapHere); qui solo l'uscita dalla prova
   Widget _demoGuide() {
     if (!widget.demoMode) return const SizedBox.shrink();
-    final text = [
-      AppL.demoGuideReady,
-      AppL.demoGuideSet,
-      currentExSeries.isEmpty ? AppL.demoGuideReps : AppL.demoGuideNext,
-      AppL.demoGuideConfirm,
-      AppL.demoGuideRest,
-    ][_demoStep];
-    final accent = Theme.of(context).colorScheme.primary;
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
-      child: Container(
-        key: ValueKey(text),
-        width: double.infinity,
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-        padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
-        decoration: BoxDecoration(
-          color: accent.withAlpha(_isDarkCtx(context) ? 28 : 36),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: accent.withAlpha(120)),
-        ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(Icons.lightbulb_outline_rounded, color: accent, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(text,
-                style: TextStyle(
-                    color: _isDarkCtx(context) ? Colors.white : Colors.black87, fontSize: 13, height: 1.35)),
-          ),
-          // esci dalla prova (SALTA in basso è il recupero)
-          GestureDetector(
-            onTap: _saveAndExit,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: Icon(Icons.close_rounded, size: 20, color: _isDarkCtx(context) ? Colors.white54 : Colors.black45),
-            ),
-          ),
-        ]),
+    return Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: IconButton(
+        onPressed: _saveAndExit,
+        icon: Icon(Icons.close_rounded, color: _isDarkCtx(context) ? Colors.white54 : Colors.black45),
       ),
     );
   }
@@ -7475,6 +7486,7 @@ class _DrumPickers extends StatefulWidget {
   final VoidCallback onRepsInteraction; // a ogni cambio delle reps (fine serie); il peso no
   final VoidCallback? onKgInteraction; // prova guidata: il peso è stato impostato
   final int tapHint; // prova guidata: 1 fa pulsare la ruota kg, 2 la ruota reps
+  final String? tapText; // prova guidata: testo vicino alla ruota
 
   const _DrumPickers({
     super.key,
@@ -7495,6 +7507,7 @@ class _DrumPickers extends StatefulWidget {
     required this.onRepsInteraction,
     this.onKgInteraction,
     this.tapHint = 0,
+    this.tapText,
   });
 
   @override
@@ -8108,6 +8121,8 @@ class _DrumPickersState extends State<_DrumPickers>
           Expanded(
             child: _TapHere(
               on: widget.tapHint == 1,
+              swipe: true,
+              hint: widget.tapText,
               child: ClipRect(
               child: _buildDrum(
                 ctrl: _kgCtrl,
@@ -8131,6 +8146,8 @@ class _DrumPickersState extends State<_DrumPickers>
           Expanded(
             child: _TapHere(
               on: widget.tapHint == 2,
+              swipe: true,
+              hint: widget.tapText,
               child: ClipRect(
               child: _buildDrum(
                 ctrl: _repsCtrl,
@@ -8152,13 +8169,15 @@ class _DrumPickersState extends State<_DrumPickers>
   }
 }
 
-// Prova guidata: anello pulsante attorno a ciò che va toccato.
-// L'albero resta uguale acceso o spento, così il figlio (le ruote) non perde lo stato.
+// Prova guidata: anello pulsante attorno a ciò che va toccato, gesto (ruote) o freccia (tasti) e testo lì vicino.
+// Il primo figlio dello Stack resta sempre lo stesso, così il figlio (le ruote) non perde lo stato.
 class _TapHere extends StatefulWidget {
   final bool on;
   final double radius;
   final Widget child;
-  const _TapHere({required this.on, required this.child, this.radius = 16});
+  final String? hint; // testo sopra il bersaglio
+  final bool swipe; // ruota: mano che scorre su e giù; altrimenti freccia verso il tasto
+  const _TapHere({required this.on, required this.child, this.radius = 16, this.hint, this.swipe = false});
 
   @override
   State<_TapHere> createState() => _TapHereState();
@@ -8197,18 +8216,72 @@ class _TapHereState extends State<_TapHere> with SingleTickerProviderStateMixin 
   @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
+    final dark = _isDarkCtx(context);
     return AnimatedBuilder(
       animation: _c,
-      builder: (_, child) => DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: widget.on
-            ? BoxDecoration(
-                borderRadius: BorderRadius.circular(widget.radius),
-                border: Border.all(color: accent.withAlpha((80 + 175 * _c.value).round()), width: 3),
-              )
-            : const BoxDecoration(),
-        child: child,
-      ),
+      builder: (_, child) {
+        final v = Curves.easeInOut.transform(_c.value);
+        return Stack(fit: StackFit.passthrough, clipBehavior: Clip.none, children: [
+          DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: widget.on
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(widget.radius),
+                    border: Border.all(color: accent.withAlpha((80 + 175 * _c.value).round()), width: 3),
+                  )
+                : const BoxDecoration(),
+            child: child,
+          ),
+          if (widget.on && widget.swipe)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Align(
+                  alignment: const Alignment(0, 0.6),
+                  child: Transform.translate(
+                    offset: Offset(0, 14 - 28 * v),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: accent.withAlpha(210), shape: BoxShape.circle),
+                      child: const Icon(Icons.swipe_vertical_rounded, color: Colors.white, size: 30),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (widget.on && (widget.hint != null || !widget.swipe))
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: IgnorePointer(
+                child: FractionalTranslation(
+                  translation: const Offset(0, -1),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    if (widget.hint != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: dark ? const Color(0xF2202024) : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: accent, width: 1.5),
+                        ),
+                        child: Text(widget.hint!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: dark ? Colors.white : Colors.black87, fontSize: 13, height: 1.3)),
+                      ),
+                    if (!widget.swipe)
+                      Transform.translate(
+                        offset: Offset(0, 8 * v),
+                        child: Icon(Icons.south_rounded, color: accent, size: 34),
+                      ),
+                  ]),
+                ),
+              ),
+            ),
+        ]);
+      },
       child: widget.child,
     );
   }

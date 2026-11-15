@@ -5087,56 +5087,136 @@ class _WorkoutEngineState extends State<WorkoutEngine>
           perfColor = const Color(0xFFE0A458);
           perfLabel = AppL.plateau;
         }
-        return AlertDialog(
-          backgroundColor: _isDarkCtx(context) ? const Color(0xFF1C1C1E) : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Column(
-            children: [
-              Icon(perfIcon, color: perfColor, size: 40),
-              const SizedBox(height: 8),
-              Text(
-                'ALLENAMENTO COMPLETATO!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(c).colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                perfLabel,
-                style: TextStyle(
-                  color: perfColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
+        final dark = _isDarkCtx(context);
+        final primary = Theme.of(c).colorScheme.primary;
+        final records = sessionRecords(widget.history, _allCompletedExercises, _sessionId);
+        final tiles = <Widget>[
+          _recapTile(Icons.fitness_center, AppL.exercisesLabel, '${_allCompletedExercises.length}'),
+          _recapTile(Icons.repeat, AppL.totalSeries, '$totalSeries'),
+          if (volume > 0)
+            _recapTile(Icons.scale_rounded, AppL.totalVolume,
+                '${formatWeightValue(volume, usePounds: _displayInPounds, maxDecimals: 0)} ${_displayInPounds ? 'lb' : 'kg'}'),
+          if (minutes > 0 && minutes <= 240)
+            _recapTile(Icons.timer_outlined, AppL.workoutDuration,
+                minutes >= 60 ? '${minutes ~/ 60} h ${minutes % 60} min' : '$minutes min'),
+        ];
+        // A tutto schermo: prima era un dialogo sopra il riquadro verde dell'esercizio finito, che restava coperto.
+        return Dialog.fullscreen(
+          backgroundColor: Theme.of(c).scaffoldBackgroundColor,
+          child: SafeArea(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Divider(color: _isDarkCtx(context) ? Colors.white24 : Colors.black26),
-                const SizedBox(height: 8),
-                _recapRow(
-                  Icons.fitness_center,
-                  'Esercizi',
-                  '${_allCompletedExercises.length}',
-                ),
-                _recapRow(Icons.repeat, AppL.totalSeries, '$totalSeries'),
-                if (volume > 0)
-                  _recapRow(Icons.scale_rounded, AppL.totalVolume,
-                      '${formatWeightValue(volume, usePounds: _displayInPounds, maxDecimals: 0)} ${_displayInPounds ? 'lb' : 'kg'}'),
-                if (minutes > 0 && minutes <= 240)
-                  _recapRow(Icons.timer_outlined, AppL.workoutDuration,
-                      minutes >= 60 ? '${minutes ~/ 60} h ${minutes % 60} min' : '$minutes min'),
-                const SizedBox(height: 8),
-                Divider(color: _isDarkCtx(context) ? Colors.white24 : Colors.black26),
-                const SizedBox(height: 8),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+                    child: Column(
+                      children: [
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: 1),
+                          duration: const Duration(milliseconds: 650),
+                          curve: Curves.easeOutBack,
+                          builder: (_, v, child) => Transform.scale(scale: v, child: child),
+                          child: Container(
+                            width: 104,
+                            height: 104,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [primary, Color.lerp(primary, Colors.black, 0.35)!],
+                              ),
+                              boxShadow: [BoxShadow(color: primary.withAlpha(90), blurRadius: 32, spreadRadius: 4)],
+                            ),
+                            child: Icon(records.isEmpty ? Icons.check_rounded : Icons.emoji_events_rounded,
+                                size: 58, color: Colors.black),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          AppL.workoutComplete,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.w800, fontSize: 24),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(color: perfColor.withAlpha(38), borderRadius: BorderRadius.circular(20)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(perfIcon, color: perfColor, size: 18),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(perfLabel,
+                                    style: TextStyle(color: perfColor, fontSize: 14, fontWeight: FontWeight.w700)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const SizedBox(height: 12),
+                        for (var i = 0; i < tiles.length; i += 2)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              children: [
+                                Expanded(child: tiles[i]),
+                                const SizedBox(width: 10),
+                                Expanded(child: i + 1 < tiles.length ? tiles[i + 1] : const SizedBox()),
+                              ],
+                            ),
+                          ),
+                        if (records.isNotEmpty) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withAlpha(dark ? 30 : 45),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.amber.withAlpha(140)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(AppL.personalBest,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 15,
+                                            color: dark ? Colors.white : Colors.black87)),
+                                  ],
+                                ),
+                                for (final r in records)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(r.exercise,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(color: dark ? Colors.white70 : Colors.black87)),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          r.w > 0
+                                              ? '${_formatWeightLabel(r.w)} × ${r.r}'
+                                              : '${r.r} ${AppL.reps.toLowerCase()}',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black87),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
                 // Streak progress section
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -5255,92 +5335,82 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                   widget.day.dayName,
                   style: TextStyle(color: _isDarkCtx(context) ? Colors.white38 : Colors.black38, fontSize: 12),
                 ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primary,
+                            side: BorderSide(color: primary),
+                            minimumSize: const Size(0, 52),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: () => _showDettagliMiglioramenti(c),
+                          child: Text(AppL.details,
+                              textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primary,
+                            foregroundColor: Colors.black,
+                            minimumSize: const Size(0, 52),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(c);
+                            Navigator.pop(context);
+                          },
+                          child: Text(AppL.greatWork,
+                              textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(c).colorScheme.primary,
-                  side: BorderSide(color: Theme.of(c).colorScheme.primary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () => _showDettagliMiglioramenti(c),
-                child: const Text(
-                  'DETTAGLI',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            if (!kIsWeb)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.share_rounded),
-                  label: const Text(
-                    'Condividi allenamento',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Theme.of(c).colorScheme.primary,
-                    side: BorderSide(color: Theme.of(c).colorScheme.primary),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () => _shareWorkoutResult(c),
-                ),
-              ),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(c).colorScheme.primary,
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.pop(c);
-                  Navigator.pop(context);
-                },
-                child: const Text(
-                  'OTTIMO LAVORO!',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
         );
       },
     );
   }
-  Widget _recapRow(IconData icon, String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(
-      children: [
-        Icon(icon, color: Colors.amber, size: 20),
-        const SizedBox(width: 12),
-        Flexible(
-          child: Text(label, style: TextStyle(color: _isDarkCtx(context) ? Colors.white60 : Colors.black54)),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: TextStyle(
-            color: _isDarkCtx(context) ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+  Widget _recapTile(IconData icon, String label, String value) {
+    final dark = _isDarkCtx(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF1F1F22) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: dark ? Colors.white10 : Colors.black12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: dark ? Colors.white : Colors.black87)),
           ),
-        ),
-      ],
-    ),
-  );
+          Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: dark ? Colors.white60 : Colors.black54)),
+        ],
+      ),
+    );
+  }
 
   String _todayLabel() {
     final now = DateTime.now();
@@ -6350,8 +6420,9 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     // ai pannelli serve il numero da mostrare in "prova N reps"
     final int targetR = plan.provaReps ?? plan.target;
     // Impostata: le ruote partono dalla proposta (peso alzato o rep in più). Suggerita: da kg e reps della
-    // volta scorsa, e la ruota da alzare rimbalza finché l'utente non sale.
-    final bool suggerita = !_progressionPreset && lastR > 0;
+    // volta scorsa, e la ruota da alzare rimbalza finché l'utente non sale. Se la proposta è un peso più basso
+    // (oggi non si arriva al target) le ruote ci vanno in tutte e due le modalità.
+    final bool suggerita = !_progressionPreset && lastR > 0 && plan.kg >= lastW;
     final double startKg = suggerita ? lastW : plan.kg;
     final int startReps = suggerita ? lastR : plan.reps;
 
@@ -7173,13 +7244,19 @@ class _WorkoutEngineState extends State<WorkoutEngine>
   final Map<String, double> _steps = {}; // salto di peso abituale per esercizio (weightStep)
   ProgressionPlan _plan(ExerciseConfig ex, int s) {
     double w(Map m) => (m['w'] as num?)?.toDouble() ?? 0.0;
+    int r(Map m) => (m['r'] as num?)?.toInt() ?? 0;
     final p = _getSuggest(ex.name, s);
     final today = currentExSeries.where((e) => (e['s'] as num?)?.toInt() == s - 1);
+    // la serie prima, oggi e la volta scorsa: dice com'è la forma di oggi (progressionPlan)
+    final lp = s > 1 ? _getSuggest(ex.name, s - 1) : const {};
     return progressionPlan(
       target: ex.repsList.isEmpty ? 10 : ex.repsList[scala.min(s, ex.repsList.length) - 1],
       lastKg: w(p),
-      lastReps: (p['r'] as num?)?.toInt() ?? 0,
+      lastReps: r(p),
       todayPrevKg: today.isEmpty ? null : w(today.last),
+      todayPrevReps: today.isEmpty ? 0 : r(today.last),
+      lastPrevKg: w(lp),
+      lastPrevReps: r(lp),
       step: _steps.putIfAbsent(ex.name, () => weightStep(widget.history, ex.name)),
     );
   }

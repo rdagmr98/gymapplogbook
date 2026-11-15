@@ -1,29 +1,68 @@
 typedef ProgressionPlan = ({double kg, int reps, int target, bool aumento, int? provaReps});
 
-/// Doppia progressione su una serie, confrontata con la stessa serie della volta scorsa:
-/// - target+2 raggiunto -> peso + [step], reps di nuovo al target ([aumento]);
-/// - altrimenti -> stesso peso e una rep in più della volta scorsa ([provaReps]).
-/// Il peso sale SOLO con [aumento]: un aumento fatto oggi sulla serie prima non si porta su questa
-/// (con serie a piramide 70/75 diventava 80 senza motivo, segnalato il 2026-11-15).
-/// [todayPrevKg] = peso della serie precedente fatta oggi, usato solo se questa serie non ha storico.
-/// [step] = salto di peso abituale ([weightStep]).
+/// Massimale stimato di una serie (formula di Epley): mette sulla stessa scala serie con pesi e reps diversi.
+double e1rm(num w, num r) => w * (1 + r / 30);
+
+/// Proposta per una serie. Le serie non sono indipendenti (richiesta dell'utente del 2026-11-15):
+/// - forza di oggi su questa serie = massimale della stessa serie la volta scorsa ([lastKg]×[lastReps]),
+///   corretto da come è andata oggi la serie prima rispetto alla serie prima della volta scorsa
+///   ([todayPrevKg]×[todayPrevReps] contro [lastPrevKg]×[lastPrevReps]): 80×10 invece di 80×8 alza la serie dopo;
+/// - reps fattibili oggi col peso della volta scorsa >= target+2 -> peso + [step], reps al target ([aumento]);
+///   sotto target-2 -> peso più basso con cui si fanno le reps del target; altrimenti stesso peso e una rep
+///   in più di quelle fattibili ([provaReps]);
+/// - serie senza storico: dalla serie prima di oggi con 2 reps in meno di fatica (80×8 -> 10 reps con 70).
+/// [step] = salto di peso abituale ([weightStep]); i pesi proposti restano sulla griglia del peso di partenza.
 ProgressionPlan progressionPlan({
   required int target,
   required double lastKg,
   required int lastReps,
   double? todayPrevKg,
+  int todayPrevReps = 0,
+  double lastPrevKg = 0,
+  int lastPrevReps = 0,
   double step = 2.5,
 }) {
-  final kg = lastKg > 0 ? lastKg : (todayPrevKg ?? 0);
-  final aumento = lastKg > 0 && lastReps >= target + 2;
-  final prova = !aumento && lastReps > 0 ? lastReps + 1 : null;
-  return (
-    kg: aumento ? lastKg + step : (kg > 0 || lastReps > 0 ? kg : 20.0),
-    reps: prova ?? target,
-    target: target,
-    aumento: aumento,
-    provaReps: prova,
-  );
+  final tKg = todayPrevKg ?? 0;
+  // peso per [reps] reps con massimale [e], per difetto sulla griglia di [ref]
+  double weightFor(double e, int reps, double ref) {
+    final w = ref - ((ref - e / (1 + reps / 30)) / step - 1e-6).ceil() * step;
+    return w > 0 ? w : ref;
+  }
+
+  ProgressionPlan plan(double kg, int reps, {bool aumento = false, int? prova}) =>
+      (kg: kg, reps: reps, target: target, aumento: aumento, provaReps: prova);
+
+  if (lastKg > 0 && lastReps > 0) {
+    // ponytail: correzione limitata a ±15%, una serie prima andata storta non stravolge la proposta
+    final f = tKg > 0 && todayPrevReps > 0 && lastPrevKg > 0 && lastPrevReps > 0
+        ? (e1rm(tKg, todayPrevReps) / e1rm(lastPrevKg, lastPrevReps)).clamp(0.85, 1.15)
+        : 1.0;
+    final e = e1rm(lastKg, lastReps) * f;
+    final r = (30 * (e / lastKg - 1) + 1e-6).floor(); // reps fattibili oggi col peso della volta scorsa
+    if (r >= target + 2) return plan(lastKg + step, target, aumento: true);
+    if (r < target - 2) return plan(weightFor(e, target, lastKg), target);
+    return plan(lastKg, r + 1, prova: r + 1);
+  }
+  if (lastKg <= 0 && lastReps > 0) return plan(0, lastReps + 1, prova: lastReps + 1); // corpo libero
+  if (tKg > 0 && todayPrevReps > 0) {
+    return plan(weightFor(e1rm(tKg, todayPrevReps > 3 ? todayPrevReps - 2 : 1), target, tKg), target);
+  }
+  return plan(tKg > 0 ? tKg : 20.0, target);
+}
+
+/// Record personali di [sessionId]: esercizi di [done] la cui serie migliore ([bestSet]) batte la migliore
+/// di tutte le sessioni prima nello [history]. Un esercizio mai fatto prima non è un record.
+List<({String exercise, double w, int r})> sessionRecords(Iterable history, Iterable<Map> done, String sessionId) {
+  final out = <({String exercise, double w, int r})>[];
+  for (final ex in done) {
+    final c = bestSet(ex['series'] as List?);
+    final p = bestSet([
+      for (final h in history)
+        if (h is Map && h['exercise'] == ex['exercise'] && h['session_id'] != sessionId) ...?(h['series'] as List?),
+    ]);
+    if (c != null && p != null && c.score > p.score) out.add((exercise: '${ex['exercise']}', w: c.w, r: c.r));
+  }
+  return out;
 }
 
 /// Salto di peso abituale di [exercise]: la differenza più piccola tra i pesi usati nello storico

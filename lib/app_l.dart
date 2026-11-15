@@ -81,6 +81,7 @@ class AppL {
     'confirm': {'it': 'Conferma', 'en': 'Confirm', 'es': 'Confirmar', 'pt': 'Confirmar', 'fr': 'Confirmer', 'de': 'Bestätigen', 'el': 'Επιβεβαίωση', 'ar': 'تأكيد', 'pl': 'Potwierdź', 'ro': 'Confirmă', 'hu': 'Megerősítés'},
     'workout': {'it': 'Allenamento', 'en': 'Workout', 'es': 'Entrenamiento', 'pt': 'Treino', 'fr': 'Entraînement', 'de': 'Training', 'el': 'Προπόνηση', 'ar': 'تمرين', 'pl': 'Trening', 'ro': 'Antrenament', 'hu': 'Edzés'},
     'totalVolume': {'it': 'Volume totale', 'en': 'Total volume', 'es': 'Volumen total', 'pt': 'Volume total', 'fr': 'Volume total', 'de': 'Gesamtvolumen', 'el': 'Συνολικός όγκος', 'ar': 'الحجم الكلي', 'pl': 'Całkowita objętość', 'ro': 'Volum total', 'hu': 'Összes térfogat'},
+    'workoutDuration': {'it': 'Durata', 'en': 'Duration', 'es': 'Duración', 'pt': 'Duração', 'fr': 'Durée', 'de': 'Dauer', 'el': 'Διάρκεια', 'ar': 'المدة', 'pl': 'Czas trwania', 'ro': 'Durată', 'hu': 'Időtartam'},
     'personalBest': {'it': 'Record personale', 'en': 'Personal best', 'es': 'Mejor personal', 'pt': 'Recorde pessoal', 'fr': 'Record personnel', 'de': 'Persönlicher Rekord', 'el': 'Προσωπικό ρεκόρ', 'ar': 'رقم شخصي', 'pl': 'Osobisty rekord', 'ro': 'Record personal', 'hu': 'Személyes rekord'},
     'language': {'it': 'Lingua', 'en': 'Language', 'es': 'Idioma', 'pt': 'Idioma', 'fr': 'Langue', 'de': 'Sprache', 'el': 'Γλώσσα', 'ar': 'اللغة', 'pl': 'Język', 'ro': 'Limbă', 'hu': 'Nyelv'},
     'italian': {'it': 'Italiano', 'en': 'Italian', 'es': 'Italiano', 'pt': 'Italiano', 'fr': 'Italien', 'de': 'Italienisch', 'el': 'Ιταλικά', 'ar': 'إيطالي', 'pl': 'Włoski', 'ro': 'Italiană', 'hu': 'Olasz'},
@@ -392,6 +393,7 @@ class AppL {
   static String get confirm => _t('confirm');
   static String get workout => _t('workout');
   static String get totalVolume => _t('totalVolume');
+  static String get workoutDuration => _t('workoutDuration');
   static String get personalBest => _t('personalBest');
   static String get language => _t('language');
   static String get italian => _t('italian');

@@ -1,31 +1,22 @@
 typedef ProgressionPlan = ({double kg, int reps, int target, bool aumento, int? provaReps});
 
-/// Doppia progressione su una serie, confrontata con la stessa serie della volta scorsa.
-/// Propone sempre un passo avanti, che la ruota mostra già impostato:
+/// Doppia progressione su una serie, confrontata con la stessa serie della volta scorsa:
 /// - target+2 raggiunto -> peso + [step], reps di nuovo al target ([aumento]);
-/// - altrimenti -> stesso peso e una rep in più della volta scorsa ([provaReps]);
-/// - peso alzato oggi sulla serie prima -> stesso aumento qui, reps al target.
-/// [todayPrevKg] = peso della serie precedente fatta oggi (null se è la prima),
-/// [lastPrevKg] = peso di quella stessa serie la volta scorsa, [step] = salto di peso abituale ([weightStep]).
+/// - altrimenti -> stesso peso e una rep in più della volta scorsa ([provaReps]).
+/// Il peso sale SOLO con [aumento]: un aumento fatto oggi sulla serie prima non si porta su questa
+/// (con serie a piramide 70/75 diventava 80 senza motivo, segnalato il 2026-11-15).
+/// [todayPrevKg] = peso della serie precedente fatta oggi, usato solo se questa serie non ha storico.
+/// [step] = salto di peso abituale ([weightStep]).
 ProgressionPlan progressionPlan({
   required int target,
   required double lastKg,
   required int lastReps,
   double? todayPrevKg,
-  double lastPrevKg = 0,
   double step = 2.5,
 }) {
-  var kg = lastKg;
-  if (todayPrevKg != null) {
-    if (lastKg <= 0) {
-      kg = todayPrevKg;
-    } else if (todayPrevKg > lastPrevKg) {
-      kg = lastKg + todayPrevKg - lastPrevKg;
-    }
-  }
-  final raised = lastKg > 0 && kg > lastKg;
-  final aumento = !raised && lastKg > 0 && lastReps >= target + 2;
-  final prova = !raised && !aumento && lastReps > 0 ? lastReps + 1 : null;
+  final kg = lastKg > 0 ? lastKg : (todayPrevKg ?? 0);
+  final aumento = lastKg > 0 && lastReps >= target + 2;
+  final prova = !aumento && lastReps > 0 ? lastReps + 1 : null;
   return (
     kg: aumento ? lastKg + step : (kg > 0 || lastReps > 0 ? kg : 20.0),
     reps: prova ?? target,

@@ -28,7 +28,6 @@ import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
 import 'js_stub.dart' if (dart.library.js) 'dart:js' as js;
 import 'gif_exercise_catalog.dart';
 import 'exercise_catalog.dart';
-import 'workout_tutorial.dart';
 import 'app_l.dart';
 import 'progression.dart';
 
@@ -1912,66 +1911,7 @@ class _ClientMainPageState extends State<ClientMainPage>
     });
   }
 
-  Future<void> _openTutorialFromSettings() async {
-    final accent = appAccentNotifier.value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('workout_tutorial_shown', false);
-    if (!mounted) return;
-    final demoDay = WorkoutDay(
-      dayName: 'Demo',
-      bodyParts: ['petto', 'braccia'],
-      exercises: [
-        ExerciseConfig(
-          name: 'Panca Piana',
-          targetSets: 2,
-          repsList: [10, 10],
-          recoveryTime: 15,
-          notePT: 'Mantieni i piedi a terra e la schiena leggermente arcuata.',
-        ),
-        ExerciseConfig(
-          name: 'Trazioni',
-          targetSets: 2,
-          repsList: [8, 8],
-          recoveryTime: 15,
-        ),
-      ],
-    );
-    Navigator.push(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (c, anim, _) => WorkoutTutorial(
-          accentColor: accent,
-          onComplete: () {
-            Navigator.pop(context);
-            prefs.setBool('workout_tutorial_shown', true);
-          },
-          onStartDemo: () async {
-            await Navigator.push(
-              context,
-              PageRouteBuilder(
-                pageBuilder: (bc, a, __) => WorkoutEngine(
-                  demoMode: true,
-                  day: demoDay,
-                  history: const [],
-                  carryoverWeights: const {},
-                  allSessionNames: const [],
-                  onDone: (_) {},
-                ),
-                transitionsBuilder: (bc, a, _, child) => SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 1),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
-                  child: child,
-                ),
-              ),
-            );
-          },
-        ),
-        transitionsBuilder: (c, anim, _, child) => FadeTransition(opacity: anim, child: child),
-      ),
-    );
-  }
+  Future<void> _openTutorialFromSettings() => runWorkoutDemo(context);
 
   void _openDataManagement() {
     Navigator.pop(context);
@@ -3789,71 +3729,28 @@ class _ClientMainPageState extends State<ClientMainPage>
     return '$diff giorni fa';
   }
 
+  // Avviso a chi aggiorna: true = vuole la prova guidata
+  Future<bool?> _weightFirstNotice() => showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      icon: Icon(Icons.fitness_center_rounded, color: appAccentNotifier.value),
+      title: Text(AppL.weightFirstTitle, textAlign: TextAlign.center),
+      content: Text(AppL.weightFirstBody.replaceAll('{p}', AppL.progressionMode)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(c, true), child: Text(AppL.tutorialStartDemo)),
+        FilledButton(onPressed: () => Navigator.pop(c, false), child: Text(AppL.gotIt)),
+      ],
+    ),
+  );
+
   void _startWorkout(WorkoutDay d, {bool resume = false}) async {
-    // Check if tutorial should be shown
+    // Una volta sola: chi è nuovo fa la prova guidata, chi aggiorna legge la novità del peso prima della serie
     final prefs = await SharedPreferences.getInstance();
-    final tutorialShown = prefs.getBool('workout_tutorial_shown') ?? false;
-    
-    if (!tutorialShown && !kIsWeb) {
-      // Show tutorial first with real WorkoutEngine in demo mode
+    if (!(prefs.getBool('weight_first_seen') ?? false)) {
+      await prefs.setBool('weight_first_seen', true);
       if (!mounted) return;
-      final demoDay = WorkoutDay(
-        dayName: 'Demo',
-        bodyParts: ['petto', 'braccia'],
-        exercises: [
-          ExerciseConfig(
-            name: 'Panca Piana',
-            targetSets: 2,
-            repsList: [10, 10],
-            recoveryTime: 15,
-            notePT: 'Mantieni i piedi a terra e la schiena leggermente arcuata.',
-          ),
-          ExerciseConfig(
-            name: 'Trazioni',
-            targetSets: 2,
-            repsList: [8, 8],
-            recoveryTime: 15,
-          ),
-        ],
-      );
-      await Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (c, anim, _) => WorkoutTutorial(
-            accentColor: appAccentNotifier.value,
-            onComplete: () => Navigator.pop(context),
-            onStartDemo: () async {
-              await Navigator.push(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (bc, a, __) => WorkoutEngine(
-                    demoMode: true,
-                    day: demoDay,
-                    history: const [],
-                    carryoverWeights: const {},
-                    allSessionNames: const [],
-                    onDone: (_) {},
-                  ),
-                  transitionsBuilder: (bc, a, _, child) => SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 1),
-                      end: Offset.zero,
-                    ).animate(
-                      CurvedAnimation(parent: a, curve: Curves.easeOutCubic),
-                    ),
-                    child: child,
-                  ),
-                ),
-              );
-            },
-          ),
-          transitionsBuilder: (c, anim, _, child) => FadeTransition(
-            opacity: anim,
-            child: child,
-          ),
-        ),
-      );
-      await prefs.setBool('workout_tutorial_shown', true);
+      final demo = history.isEmpty ? !kIsWeb : await _weightFirstNotice() == true;
+      if (demo && mounted) await runWorkoutDemo(context);
       if (!mounted) return;
     }
     
@@ -5724,7 +5621,10 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                 const SizedBox(width: 12),
                 Expanded(
                   flex: 2,
-                  child: ElevatedButton(
+                  child: _TapHere(
+                    on: widget.demoMode,
+                    radius: 12,
+                    child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(ctx);
                       // Il timer è già avviato, _saveSet non deve riavviarlo
@@ -5742,6 +5642,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                       "SALVA SERIE",
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
+                  ),
                   ),
                 ),
               ],
@@ -6019,7 +5920,9 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                   ),
                 ],
                 const SizedBox(height: 18),
-                SizedBox(
+                _TapHere(
+                  on: widget.demoMode,
+                  child: SizedBox(
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton.icon(
@@ -6034,6 +5937,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                     label: Text(AppL.startFirstEx),
                   ),
                 ),
+                ),
                 ..._upNext(accent),
               ],
             ),
@@ -6047,6 +5951,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     int r = int.tryParse(rC.text) ?? 0;
     if (w < 0 || r <= 0) return;
     _awaitingFirstExerciseStart = false;
+    _demoReps = false; // prova guidata: alla serie dopo si rigirano le reps
 
     final currentEx = widget.day.exercises[exI];
 
@@ -6628,8 +6533,15 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                                     useSingleStep: useSingleStep,
                                   );
                                 },
+                            tapHint: widget.demoMode && _demoStep <= 2 ? _demoStep : 0,
+                            onKgInteraction: widget.demoMode && !_demoKg
+                                ? () => setState(() => _demoKg = true)
+                                : null,
                             // solo le reps: il peso si imposta prima della serie, le reps a serie finita
-                            onRepsInteraction: () => _avviaTimerConTempo(timeToUse),
+                            onRepsInteraction: () {
+                              if (widget.demoMode && !_demoReps) setState(() => _demoReps = true);
+                              _avviaTimerConTempo(timeToUse);
+                            },
                           ),
                         ),
                         if (!giaFatto && timerActive)
@@ -6662,9 +6574,12 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                     child: SizedBox(
                       width: double.infinity,
                       height: 56,
-                      child: ElevatedButton(
-                        onPressed: _confermaSerie,
-                        child: const Text("CONFERMA SERIE"),
+                      child: _TapHere(
+                        on: widget.demoMode && _demoStep == 3,
+                        child: ElevatedButton(
+                          onPressed: _confermaSerie,
+                          child: const Text("CONFERMA SERIE"),
+                        ),
                       ),
                     ),
                   ),
@@ -7146,7 +7061,10 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                     ),
 
                     // SKIP
-                    GestureDetector(
+                    _TapHere(
+                      on: widget.demoMode,
+                      radius: 50,
+                      child: GestureDetector(
                       onTap: _skipRest,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -7167,6 +7085,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                           ),
                         ),
                       ),
+                    ),
                     ),
                   ],
                   ),
@@ -7202,16 +7121,28 @@ class _WorkoutEngineState extends State<WorkoutEngine>
       return {'w': 0.0, 'r': 0};
     }
   }
-  // Prova guidata: un riquadro che spiega il passo in corso sulla schermata vera.
+  // Prova guidata: il riquadro spiega il passo, _TapHere fa pulsare ciò che va toccato.
+  bool _demoKg = false, _demoReps = false;
+  // 0 avvio, 1 ruota kg, 2 ruota reps, 3 conferma, 4 recupero
+  int get _demoStep => isRestingFullScreen
+      ? 4
+      : _showWorkoutReadyScreen
+      ? 0
+      : !_demoKg
+      ? 1
+      : !_demoReps
+      ? 2
+      : 3;
+
   Widget _demoGuide() {
     if (!widget.demoMode) return const SizedBox.shrink();
-    final text = isRestingFullScreen
-        ? AppL.demoGuideRest
-        : _showWorkoutReadyScreen
-        ? AppL.demoGuideReady
-        : eserciziCompletati.isEmpty && currentExSeries.isEmpty
-        ? AppL.demoGuideSet
-        : AppL.demoGuideNext;
+    final text = [
+      AppL.demoGuideReady,
+      AppL.demoGuideSet,
+      currentExSeries.isEmpty ? AppL.demoGuideReps : AppL.demoGuideNext,
+      AppL.demoGuideConfirm,
+      AppL.demoGuideRest,
+    ][_demoStep];
     final accent = Theme.of(context).colorScheme.primary;
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),
@@ -7232,6 +7163,14 @@ class _WorkoutEngineState extends State<WorkoutEngine>
             child: Text(text,
                 style: TextStyle(
                     color: _isDarkCtx(context) ? Colors.white : Colors.black87, fontSize: 13, height: 1.35)),
+          ),
+          // esci dalla prova (SALTA in basso è il recupero)
+          GestureDetector(
+            onTap: _saveAndExit,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Icon(Icons.close_rounded, size: 20, color: _isDarkCtx(context) ? Colors.white54 : Colors.black45),
+            ),
           ),
         ]),
       ),
@@ -7534,6 +7473,8 @@ class _DrumPickers extends StatefulWidget {
   /// rimbalza la ruota reps finché non supera [initialReps] (modalità Suggerita)
   final bool suggerisciReps;
   final VoidCallback onRepsInteraction; // a ogni cambio delle reps (fine serie); il peso no
+  final VoidCallback? onKgInteraction; // prova guidata: il peso è stato impostato
+  final int tapHint; // prova guidata: 1 fa pulsare la ruota kg, 2 la ruota reps
 
   const _DrumPickers({
     super.key,
@@ -7552,6 +7493,8 @@ class _DrumPickers extends StatefulWidget {
     required this.onRepsChanged,
     this.onWeightModeChanged,
     required this.onRepsInteraction,
+    this.onKgInteraction,
+    this.tapHint = 0,
   });
 
   @override
@@ -7740,7 +7683,7 @@ class _DrumPickersState extends State<_DrumPickers>
 
   void _triggerInteraction({required bool isKg}) {
     _interacted = true;
-    if (!isKg) widget.onRepsInteraction();
+    isKg ? widget.onKgInteraction?.call() : widget.onRepsInteraction();
   }
 
   double _displayValueToKg(double value) =>
@@ -8163,7 +8106,9 @@ class _DrumPickersState extends State<_DrumPickers>
       child: Row(
         children: [
           Expanded(
-            child: ClipRect(
+            child: _TapHere(
+              on: widget.tapHint == 1,
+              child: ClipRect(
               child: _buildDrum(
                 ctrl: _kgCtrl,
                 items: _weightValues,
@@ -8176,6 +8121,7 @@ class _DrumPickersState extends State<_DrumPickers>
                 isKg: true,
               ),
             ),
+            ),
           ),
           Container(
             width: 1,
@@ -8183,7 +8129,9 @@ class _DrumPickersState extends State<_DrumPickers>
             margin: const EdgeInsets.symmetric(vertical: 40),
           ),
           Expanded(
-            child: ClipRect(
+            child: _TapHere(
+              on: widget.tapHint == 2,
+              child: ClipRect(
               child: _buildDrum(
                 ctrl: _repsCtrl,
                 items: _repsValues,
@@ -8196,12 +8144,101 @@ class _DrumPickersState extends State<_DrumPickers>
                 isKg: false,
               ),
             ),
+            ),
           ),
         ],
       ),
     );
   }
 }
+
+// Prova guidata: anello pulsante attorno a ciò che va toccato.
+// L'albero resta uguale acceso o spento, così il figlio (le ruote) non perde lo stato.
+class _TapHere extends StatefulWidget {
+  final bool on;
+  final double radius;
+  final Widget child;
+  const _TapHere({required this.on, required this.child, this.radius = 16});
+
+  @override
+  State<_TapHere> createState() => _TapHereState();
+}
+
+class _TapHereState extends State<_TapHere> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+
+  void _sync() {
+    if (!widget.on) {
+      _c.stop();
+    } else if (!_c.isAnimating) {
+      _c.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(_TapHere old) {
+    super.didUpdateWidget(old);
+    _sync();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, child) => DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: widget.on
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.radius),
+                border: Border.all(color: accent.withAlpha((80 + 175 * _c.value).round()), width: 3),
+              )
+            : const BoxDecoration(),
+        child: child,
+      ),
+      child: widget.child,
+    );
+  }
+}
+
+// Prova guidata sul motore vero: un esercizio, due serie, nessun dato salvato.
+Future<void> runWorkoutDemo(BuildContext context) => Navigator.push(
+  context,
+  PageRouteBuilder(
+    pageBuilder: (c, a, _) => WorkoutEngine(
+      demoMode: true,
+      day: WorkoutDay(
+        dayName: 'Demo',
+        bodyParts: ['petto'],
+        exercises: [
+          ExerciseConfig(name: 'Panca Piana', targetSets: 2, repsList: [10, 10], recoveryTime: 10),
+        ],
+      ),
+      history: const [],
+      carryoverWeights: const {},
+      allSessionNames: const [],
+      onDone: (_) {},
+    ),
+    transitionsBuilder: (c, a, _, child) => SlideTransition(
+      position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+          .animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
+      child: child,
+    ),
+  ),
+);
 
 // Andamento della scheda: volume (peso × ripetizioni) di ogni sessione, a corpo libero le ripetizioni totali.
 // Stesso stile di PTGraphWidget; il tocco su un punto mostra la serie migliore di ogni esercizio.

@@ -2102,7 +2102,10 @@ class _ClientMainPageState extends State<ClientMainPage>
     });
     if (!kIsWeb) _updateWidgetData();
     if (!kIsWeb) _maybeStartWorkoutFromWidget();
-    _loadResume(ask: true);
+    // Solo al primo caricamento: _loadData torna anche a ogni esercizio finito (onDone del motore)
+    // e troverebbe lo snapshot dell'allenamento in corso, aprendo l'avviso sopra il motore.
+    _loadResume(ask: !_resumeAsked);
+    _resumeAsked = true;
   }
 
   WorkoutDay? _resumeDay;
@@ -2134,8 +2137,7 @@ class _ClientMainPageState extends State<ClientMainPage>
       _resumeDay = day;
       _resumeDone = done;
     });
-    if (ask && day != null && !_resumeAsked && mounted) {
-      _resumeAsked = true;
+    if (ask && day != null && mounted) {
       _askResume(day, done);
     }
   }
@@ -4970,28 +4972,48 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     );
   }
 
-  void _showRecapDialog() {
+  bool _finished = false;
+
+  /// Serie migliorate oggi rispetto alla stessa serie della volta scorsa (stesso metro di Dettagli):
+  /// per esercizio, (numero serie, kg × reps di oggi, differenza).
+  List<(String, List<(int, String, String)>)> _improvements() {
+    final out = <(String, List<(int, String, String)>)>[];
+    for (final ex in _allCompletedExercises) {
+      final name = ex['exercise'] as String;
+      final prev = _previousResults[name];
+      if (prev == null) continue;
+      final curr = ex['series'] as List;
+      final sets = <(int, String, String)>[];
+      for (var i = 0; i < curr.length && i < prev.length; i++) {
+        final w = ((curr[i] as Map)['w'] as num).toDouble();
+        final r = ((curr[i] as Map)['r'] as num).toInt();
+        final pw = (prev[i]['w'] as num).toDouble();
+        final pr = (prev[i]['r'] as num).toInt();
+        if (setScore(w, r) - setScore(pw, pr) <= 0.01) continue;
+        final dW = w - pw, dR = r - pr;
+        final delta = [
+          if (dW.abs() > 0.05) '${dW > 0 ? '+' : '-'}${_formatWeightLabel(dW.abs())}',
+          if (dR != 0) '${dR > 0 ? '+' : ''}$dR reps',
+        ].join('  ');
+        sets.add((i + 1, w > 0 ? '${_formatWeightLabel(w)} × $r' : '$r reps', delta));
+      }
+      if (sets.isNotEmpty) out.add((name, sets));
+    }
+    return out;
+  }
+
+  Widget _buildRecap(BuildContext c) {
     int totalSeries = 0;
     for (final ex in _allCompletedExercises) {
       totalSeries += (ex['series'] as List).length;
     }
     final pct = _sessionProgressPct(); // null = prima volta
-    double volume = 0;
-    for (final ex in _allCompletedExercises) {
-      for (final s in ex['series'] as List) {
-        volume += ((s['w'] as num?) ?? 0) * ((s['r'] as num?) ?? 0);
-      }
-    }
     // ponytail: durata dall'avvio (_sessionId = ms di inizio, sopravvive alla ripresa); oltre 4 h
     // è un allenamento ripreso il giorno dopo e il numero non dice nulla, quindi non si mostra.
     final minutes = DateTime.now()
         .difference(DateTime.fromMillisecondsSinceEpoch(int.tryParse(_sessionId) ?? 0))
         .inMinutes;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (c) {
+    {
         IconData perfIcon;
         Color perfColor;
         String perfLabel;
@@ -5017,20 +5039,20 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         final dark = _isDarkCtx(context);
         final primary = Theme.of(c).colorScheme.primary;
         final records = sessionRecords(widget.history, _allCompletedExercises, _sessionId);
+        final improved = _improvements();
+        final green = dark ? const Color(0xFF4CD97B) : const Color(0xFF1E8E4E);
         final tiles = <Widget>[
           _recapTile(Icons.fitness_center, AppL.exercisesLabel, '${_allCompletedExercises.length}'),
           _recapTile(Icons.repeat, AppL.totalSeries, '$totalSeries'),
-          if (volume > 0)
-            _recapTile(Icons.scale_rounded, AppL.totalVolume,
-                '${formatWeightValue(volume, usePounds: _displayInPounds, maxDecimals: 0)} ${_displayInPounds ? 'lb' : 'kg'}'),
           if (minutes > 0 && minutes <= 240)
             _recapTile(Icons.timer_outlined, AppL.workoutDuration,
                 minutes >= 60 ? '${minutes ~/ 60} h ${minutes % 60} min' : '$minutes min'),
         ];
-        // A tutto schermo: prima era un dialogo sopra il riquadro verde dell'esercizio finito, che restava coperto.
-        return Dialog.fullscreen(
+        // È la schermata del motore a fine allenamento: niente riquadro verde «Esercizio completato» sotto,
+        // e il tasto indietro esce dal motore invece di chiudere un dialog.
+        return Scaffold(
           backgroundColor: Theme.of(c).scaffoldBackgroundColor,
-          child: SafeArea(
+          body: SafeArea(
             child: Column(
               children: [
                 Expanded(
@@ -5083,17 +5105,79 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                         ),
                         const SizedBox(height: 12),
                         const SizedBox(height: 12),
-                        for (var i = 0; i < tiles.length; i += 2)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Row(
-                              children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Row(
+                            children: [
+                              for (var i = 0; i < tiles.length; i++) ...[
+                                if (i > 0) const SizedBox(width: 10),
                                 Expanded(child: tiles[i]),
-                                const SizedBox(width: 10),
-                                Expanded(child: i + 1 < tiles.length ? tiles[i + 1] : const SizedBox()),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (improved.isNotEmpty) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: green.withAlpha(dark ? 24 : 30),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: green.withAlpha(110)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.trending_up_rounded, color: green, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(AppL.improvedToday,
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 15,
+                                              color: dark ? Colors.white : Colors.black87)),
+                                    ),
+                                  ],
+                                ),
+                                for (final (name, sets) in improved) ...[
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 10, bottom: 2),
+                                    child: Text(name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w700, color: dark ? Colors.white70 : Colors.black87)),
+                                  ),
+                                  for (final (n, now, delta) in sets)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 3),
+                                      child: Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 28,
+                                            child: Text('S$n',
+                                                style: TextStyle(
+                                                    fontSize: 12, color: dark ? Colors.white38 : Colors.black38)),
+                                          ),
+                                          Expanded(
+                                            child: Text(now,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(color: dark ? Colors.white : Colors.black87)),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(delta, style: TextStyle(color: green, fontWeight: FontWeight.w800)),
+                                        ],
+                                      ),
+                                    ),
+                                ],
                               ],
                             ),
                           ),
+                          const SizedBox(height: 10),
+                        ],
                         if (records.isNotEmpty) ...[
                           Container(
                             width: double.infinity,
@@ -5257,6 +5341,11 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                     ],
                   ),
                 ),
+                if (_previousResults.isNotEmpty)
+                  TextButton(
+                    onPressed: () => _showDettagliMiglioramenti(c),
+                    child: Text(AppL.details, style: TextStyle(color: primary, fontWeight: FontWeight.bold)),
+                  ),
                 const SizedBox(height: 4),
                 Text(
                   widget.day.dayName,
@@ -5270,20 +5359,23 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                   child: Row(
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: primary,
-                            side: BorderSide(color: primary),
-                            minimumSize: const Size(0, 52),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      if (!kIsWeb) ...[
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: primary,
+                              side: BorderSide(color: primary),
+                              minimumSize: const Size(0, 52),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            icon: const Icon(Icons.share_rounded),
+                            onPressed: () => _shareWorkoutResult(c),
+                            label: Text(AppL.share,
+                                maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
                           ),
-                          onPressed: () => _showDettagliMiglioramenti(c),
-                          child: Text(AppL.details,
-                              textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
                         ),
-                      ),
-                      const SizedBox(width: 12),
+                        const SizedBox(width: 12),
+                      ],
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
@@ -5292,10 +5384,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                             minimumSize: const Size(0, 52),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
-                          onPressed: () {
-                            Navigator.pop(c);
-                            Navigator.pop(context);
-                          },
+                          onPressed: () => Navigator.pop(context),
                           child: Text(AppL.greatWork,
                               textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
                         ),
@@ -5307,8 +5396,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
             ),
           ),
         );
-      },
-    );
+    }
   }
   Widget _recapTile(IconData icon, String label, String value) {
     final dark = _isDarkCtx(context);
@@ -6097,6 +6185,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
             if (mounted) Navigator.of(context).pop();
             return;
           }
+          if (mounted) setState(() => _finished = true);
           final prefs = await SharedPreferences.getInstance();
           await prefs.remove(
             _inProgressKey,
@@ -6123,7 +6212,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
               _streakTotalCount = widget.allSessionNames.length;
               _streakDoneNames = sData.done;
             });
-          if (mounted) _showRecapDialog();
           return; // Non salvare stato dopo workout completato
         } else if (_nextPendingExerciseIndex(fromExclusive: groupEnd)
             case final nextIndex?) {
@@ -6181,6 +6269,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
           if (mounted) Navigator.of(context).pop();
           return;
         }
+        if (mounted) setState(() => _finished = true);
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(
           _inProgressKey,
@@ -6208,7 +6297,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
             _streakTotalCount = widget.allSessionNames.length;
             _streakDoneNames = sData.done;
           });
-        if (mounted) _showRecapDialog();
         return; // Non salvare stato dopo workout completato
       } else if (_nextPendingExerciseIndex(fromExclusive: exI)
           case final nextIndex?) {
@@ -6256,6 +6344,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
 
   @override
   Widget build(BuildContext context) {
+    if (_finished) return _buildRecap(context);
     // 1. DEFINIAMO L'ESERCIZIO ATTUALE
     var ex = widget.day.exercises[exI];
 

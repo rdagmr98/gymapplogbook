@@ -83,7 +83,6 @@ class AppL {
     'totalVolume': {'it': 'Volume totale', 'en': 'Total volume', 'es': 'Volumen total', 'pt': 'Volume total', 'fr': 'Volume total', 'de': 'Gesamtvolumen', 'el': 'Συνολικός όγκος', 'ar': 'الحجم الكلي', 'pl': 'Całkowita objętość', 'ro': 'Volum total', 'hu': 'Összes térfogat'},
     'workoutDuration': {'it': 'Durata', 'en': 'Duration', 'es': 'Duración', 'pt': 'Duração', 'fr': 'Durée', 'de': 'Dauer', 'el': 'Διάρκεια', 'ar': 'المدة', 'pl': 'Czas trwania', 'ro': 'Durată', 'hu': 'Időtartam'},
     'personalBest': {'it': 'Record personale', 'en': 'Personal best', 'es': 'Mejor personal', 'pt': 'Recorde pessoal', 'fr': 'Record personnel', 'de': 'Persönlicher Rekord', 'el': 'Προσωπικό ρεκόρ', 'ar': 'رقم شخصي', 'pl': 'Osobisty rekord', 'ro': 'Record personal', 'hu': 'Személyes rekord'},
-    'improvedToday': {'it': 'Migliorato oggi', 'en': 'Improved today', 'es': 'Mejorado hoy', 'pt': 'Melhorado hoje', 'fr': 'Amélioré aujourd\'hui', 'de': 'Heute verbessert', 'el': 'Βελτιώθηκε σήμερα', 'ar': 'تحسّن اليوم', 'pl': 'Poprawione dziś', 'ro': 'Îmbunătățit azi', 'hu': 'Ma javult'},
     'language': {'it': 'Lingua', 'en': 'Language', 'es': 'Idioma', 'pt': 'Idioma', 'fr': 'Langue', 'de': 'Sprache', 'el': 'Γλώσσα', 'ar': 'اللغة', 'pl': 'Język', 'ro': 'Limbă', 'hu': 'Nyelv'},
     'italian': {'it': 'Italiano', 'en': 'Italian', 'es': 'Italiano', 'pt': 'Italiano', 'fr': 'Italien', 'de': 'Italienisch', 'el': 'Ιταλικά', 'ar': 'إيطالي', 'pl': 'Włoski', 'ro': 'Italiană', 'hu': 'Olasz'},
     'english': {'it': 'Inglese', 'en': 'English', 'es': 'Inglés', 'pt': 'Inglês', 'fr': 'Anglais', 'de': 'Englisch', 'el': 'Αγγλικά', 'ar': 'إنجليزي', 'pl': 'Angielski', 'ro': 'Engleză', 'hu': 'Angol'},
@@ -338,6 +337,13 @@ class AppL {
     'noFileSelected': {'it': 'Nessun file', 'en': 'No file', 'es': 'Sin archivo', 'pt': 'Sem arquivo', 'fr': 'Aucun fichier', 'de': 'Keine Datei', 'el': 'Κανένα αρχείο', 'ar': 'لا يوجد ملف', 'pl': 'Brak pliku', 'ro': 'Niciun fișier', 'hu': 'Nincs fájl'},
     'startCardio': {'it': 'INIZIA', 'en': 'START', 'es': 'INICIAR', 'pt': 'INICIAR', 'fr': 'DÉMARRER', 'de': 'STARTEN', 'el': 'ΕΝΑΡΞΗ', 'ar': 'ابدأ', 'pl': 'START', 'ro': 'START', 'hu': 'INDÍT'},
     'cardioRunning': {'it': 'IN CORSO...', 'en': 'RUNNING...', 'es': 'EN CURSO...', 'pt': 'EM CURSO...', 'fr': 'EN COURS...', 'de': 'LÄUFT...', 'el': 'ΣΕ ΕΞΕΛΙΞΗ...', 'ar': 'جارٍ...', 'pl': 'W TOKU...', 'ro': 'ÎN CURS...', 'hu': 'FOLYAMATBAN...'},
+    'improvedToday': {'it': 'Migliorati oggi', 'en': 'Improved today', 'es': 'Mejorados hoy', 'pt': 'Melhorados hoje', 'fr': 'Améliorés aujourd\'hui', 'de': 'Heute verbessert', 'el': 'Βελτιωμένα σήμερα', 'ar': 'تحسنت اليوم', 'pl': 'Poprawione dziś', 'ro': 'Îmbunătățite azi', 'hu': 'Ma javult'},
+    'personalRecords': {'it': 'Record personali', 'en': 'Personal records', 'es': 'Récords personales', 'pt': 'Recordes pessoais', 'fr': 'Records personnels', 'de': 'Persönliche Rekorde', 'el': 'Προσωπικά ρεκόρ', 'ar': 'الأرقام القياسية', 'pl': 'Rekordy osobiste', 'ro': 'Recorduri personale', 'hu': 'Személyes rekordok'},
+    'moreExercisesCount': {'it': '+{n} altri', 'en': '+{n} more', 'es': '+{n} más', 'pt': '+{n} mais', 'fr': '+{n} autres', 'de': '+{n} weitere', 'el': '+{n} ακόμη', 'ar': '+{n} أخرى', 'pl': '+{n} więcej', 'ro': '+{n} altele', 'hu': '+{n} további'},
+    'microcycleComplete': {'it': 'Microciclo completato', 'en': 'Microcycle complete', 'es': 'Microciclo completado', 'pt': 'Microciclo concluído', 'fr': 'Microcycle terminé', 'de': 'Mikrozyklus abgeschlossen', 'el': 'Ολοκληρώθηκε ο μικρόκυκλος', 'ar': 'اكتملت الدورة الصغيرة', 'pl': 'Mikrocykl ukończony', 'ro': 'Microciclu finalizat', 'hu': 'Mikrociklus kész'},
+    'topProgress': {'it': 'Top progressi', 'en': 'Top progress', 'es': 'Mejores progresos', 'pt': 'Melhores progressos', 'fr': 'Meilleurs progrès', 'de': 'Top-Fortschritte', 'el': 'Κορυφαία πρόοδος', 'ar': 'أفضل التقدمات', 'pl': 'Najlepsze postępy', 'ro': 'Top progrese', 'hu': 'Legnagyobb fejlődés'},
+    'vsPreviousSession': {'it': 'Rispetto alla volta scorsa', 'en': 'Vs last session', 'es': 'Respecto a la última vez', 'pt': 'Em relação à última vez', 'fr': 'Par rapport à la dernière fois', 'de': 'Im Vergleich zum letzten Mal', 'el': 'Σε σχέση με την προηγούμενη φορά', 'ar': 'مقارنة بالمرة السابقة', 'pl': 'W porównaniu z ostatnim razem', 'ro': 'Față de ultima dată', 'hu': 'Az előzőhöz képest'},
+    'improvedCount': {'it': '{n} migliorati', 'en': '{n} improved', 'es': '{n} mejorados', 'pt': '{n} melhorados', 'fr': '{n} améliorés', 'de': '{n} verbessert', 'el': '{n} βελτιώθηκαν', 'ar': '{n} تحسن', 'pl': '{n} poprawione', 'ro': '{n} îmbunătățite', 'hu': '{n} javult'},
   };
 
   static String get mySchedule => _t('mySchedule');
@@ -390,7 +396,6 @@ class AppL {
   static String get totalVolume => _t('totalVolume');
   static String get workoutDuration => _t('workoutDuration');
   static String get personalBest => _t('personalBest');
-  static String get improvedToday => _t('improvedToday');
   static String get language => _t('language');
   static String get italian => _t('italian');
   static String get english => _t('english');
@@ -645,4 +650,11 @@ class AppL {
   static String get noFileSelected => _t('noFileSelected');
   static String get startCardio => _t('startCardio');
   static String get cardioRunning => _t('cardioRunning');
+  static String get improvedToday => _t('improvedToday');
+  static String get personalRecords => _t('personalRecords');
+  static String get moreExercisesCount => _t('moreExercisesCount');
+  static String get microcycleComplete => _t('microcycleComplete');
+  static String get topProgress => _t('topProgress');
+  static String get vsPreviousSession => _t('vsPreviousSession');
+  static String get improvedCount => _t('improvedCount');
 }

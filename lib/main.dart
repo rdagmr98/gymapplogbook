@@ -5057,10 +5057,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
   }
 
   Widget _buildRecap(BuildContext c) {
-    int totalSeries = 0;
-    for (final ex in _allCompletedExercises) {
-      totalSeries += (ex['series'] as List).length;
-    }
     final pct = _sessionProgressPct(); // null = prima volta
     // ponytail: durata dall'avvio (_sessionId = ms di inizio, sopravvive alla ripresa); oltre 4 h
     // è un allenamento ripreso il giorno dopo e il numero non dice nulla, quindi non si mostra.
@@ -5095,13 +5091,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         final records = sessionRecords(widget.history, _allCompletedExercises, _sessionId);
         final improved = _improvements();
         final green = dark ? const Color(0xFF4CD97B) : const Color(0xFF1E8E4E);
-        final tiles = <Widget>[
-          _recapTile(Icons.fitness_center, AppL.exercisesLabel, '${_allCompletedExercises.length}'),
-          _recapTile(Icons.repeat, AppL.totalSeries, '$totalSeries'),
-          if (minutes > 0 && minutes <= 240)
-            _recapTile(Icons.timer_outlined, AppL.workoutDuration,
-                minutes >= 60 ? '${minutes ~/ 60} h ${minutes % 60} min' : '$minutes min'),
-        ];
         // È la schermata del motore a fine allenamento: niente riquadro verde «Esercizio completato» sotto,
         // e il tasto indietro esce dal motore invece di chiudere un dialog.
         return Scaffold(
@@ -5157,19 +5146,13 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                             ],
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Row(
-                            children: [
-                              for (var i = 0; i < tiles.length; i++) ...[
-                                if (i > 0) const SizedBox(width: 10),
-                                Expanded(child: tiles[i]),
-                              ],
-                            ],
+                        const SizedBox(height: 20),
+                        if (minutes > 0 && minutes <= 240)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _recapTile(Icons.timer_outlined, AppL.workoutDuration,
+                                minutes >= 60 ? '${minutes ~/ 60} h ${minutes % 60} min' : '$minutes min'),
                           ),
-                        ),
                         if (improved.isNotEmpty) ...[
                           Container(
                             width: double.infinity,
@@ -9944,7 +9927,6 @@ class _OverallProgressPageState extends State<_OverallProgressPage> {
         points: points,
         top: trends.where((t) => t.values.length >= 2 && t.delta > 0).toList(),
         accent: widget.accent,
-        usePounds: widget.usePounds,
       ),
     );
   }
@@ -10249,13 +10231,7 @@ class _SessionPoint {
   });
 }
 
-// ─── SHARE STORY VISUAL SYSTEM (Apex Poster 9:16) ───────────────────────────
-const Color _kShareBgTop = Color(0xFF07080D);
-const Color _kShareBgMid = Color(0xFF0D1018);
-const Color _kShareBgBottom = Color(0xFF050609);
-const Color _kShareGold = Color(0xFFFFD166);
-const Size _kShareStorySize = Size(360, 640);
-
+// --- SHARE SHEETS (card compatte nello stile dell'app) ---
 String _shareWeightLabel(double kg, bool usePounds) {
   final unit = usePounds ? 'lb' : 'kg';
   final val = formatWeightValue(
@@ -10276,615 +10252,6 @@ String _shareDurationLabel(int? minutes) {
   return '$minutes min';
 }
 
-Color _shareCtaFg(Color accent) =>
-    accent.computeLuminance() > 0.45 ? Colors.black : Colors.white;
-
-Future<void> _shareCapturedCard({
-  required GlobalKey cardKey,
-  required String fileName,
-  required String text,
-}) async {
-  final boundary =
-      cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-  if (boundary == null) return;
-  final image = await boundary.toImage(pixelRatio: 3.0);
-  final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-  if (byteData == null) return;
-  final dir = await getTemporaryDirectory();
-  final file = File('${dir.path}/$fileName');
-  await file.writeAsBytes(byteData.buffer.asUint8List());
-  await Share.shareXFiles(
-    [XFile(file.path, mimeType: 'image/png')],
-    text: text,
-  );
-}
-
-class _ApexBackdropPainter extends CustomPainter {
-  final Color accent;
-  const _ApexBackdropPainter(this.accent);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_kShareBgTop, _kShareBgMid, _kShareBgBottom],
-          stops: [0.0, 0.55, 1.0],
-        ).createShader(rect),
-    );
-
-    // Subtle architectural grid lines
-    final gridPaint = Paint()
-      ..color = Colors.white.withAlpha(7)
-      ..strokeWidth = 1;
-    const step = 45.0;
-    for (double x = step; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-    }
-    for (double y = step; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-
-    // Primary hero radial glow
-    final topGlowCenter = Offset(size.width * 0.78, size.height * 0.16);
-    canvas.drawCircle(
-      topGlowCenter,
-      size.width * 0.75,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            accent.withAlpha(54),
-            accent.withAlpha(18),
-            accent.withAlpha(0),
-          ],
-          stops: const [0.0, 0.45, 1.0],
-        ).createShader(
-          Rect.fromCircle(center: topGlowCenter, radius: size.width * 0.75),
-        ),
-    );
-
-    // Secondary bottom-left glow
-    final botGlowCenter = Offset(size.width * 0.15, size.height * 0.86);
-    canvas.drawCircle(
-      botGlowCenter,
-      size.width * 0.55,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [accent.withAlpha(24), accent.withAlpha(0)],
-        ).createShader(
-          Rect.fromCircle(center: botGlowCenter, radius: size.width * 0.55),
-        ),
-    );
-
-    // Precision editorial accent bar aligned inside the top frame
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(26, 20, 44, 3),
-        const Radius.circular(1.5),
-      ),
-      Paint()..color = accent,
-    );
-
-    // Subtle inner hairline frame
-    final frameRect = Rect.fromLTWH(12, 12, size.width - 24, size.height - 24);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(frameRect, const Radius.circular(18)),
-      Paint()
-        ..color = Colors.white.withAlpha(16)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ApexBackdropPainter old) => old.accent != accent;
-}
-
-class _ShareStoryCanvas extends StatelessWidget {
-  final GlobalKey cardKey;
-  final Color accent;
-  final Widget child;
-  const _ShareStoryCanvas({
-    required this.cardKey,
-    required this.accent,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final maxH = (MediaQuery.sizeOf(context).height * 0.48).clamp(260.0, 440.0);
-    return SizedBox(
-      height: maxH,
-      width: double.infinity,
-      child: Center(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: FittedBox(
-            fit: BoxFit.contain,
-            child: RepaintBoundary(
-              key: cardKey,
-              child: SizedBox(
-                width: _kShareStorySize.width,
-                height: _kShareStorySize.height,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CustomPaint(painter: _ApexBackdropPainter(accent)),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(26, 32, 26, 20),
-                      child: child,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ShareBrandFooter extends StatelessWidget {
-  final Color accent;
-  const _ShareBrandFooter({required this.accent});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(height: 1, color: Colors.white.withAlpha(22)),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(7),
-              child: Image.asset(
-                'assets/icon_client.png',
-                width: 24,
-                height: 24,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    Icon(Icons.fitness_center_rounded, size: 20, color: accent),
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Flexible(
-              flex: 0,
-              child: Text(
-                'GYMAPP',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12.5,
-                  letterSpacing: 1.6,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Container(
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                AppL.keepPushing.toUpperCase(),
-                textAlign: TextAlign.right,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white38,
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.1,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _ShareMicrocycleBar extends StatelessWidget {
-  final List<String> allNames;
-  final Set<String> doneNames;
-  final Color accent;
-  final int maxPills;
-  final bool compact;
-  const _ShareMicrocycleBar({
-    required this.allNames,
-    required this.doneNames,
-    required this.accent,
-    this.maxPills = 6,
-    this.compact = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final total = allNames.length;
-    if (total == 0) return const SizedBox.shrink();
-    final doneCount =
-        allNames.where((n) => doneNames.contains(n)).length.clamp(0, total);
-    final complete = doneCount >= total;
-    final shown = allNames.take(maxPills).toList();
-    final extra = total - shown.length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                AppL.thisMicrocycle.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              flex: 0,
-              child: Text(
-                '$doneCount/$total',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: complete ? _kUp : accent,
-                  fontSize: compact ? 11.5 : 12.5,
-                  fontWeight: FontWeight.w900,
-                  fontFeatures: const [ui.FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: compact ? 5 : 8),
-        Row(
-          children: [
-            for (int i = 0; i < total; i++) ...[
-              if (i > 0) const SizedBox(width: 3),
-              Expanded(
-                child: Container(
-                  height: compact ? 3.5 : 4.5,
-                  decoration: BoxDecoration(
-                    color: doneNames.contains(allNames[i])
-                        ? (complete ? _kUp : accent)
-                        : Colors.white.withAlpha(24),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        SizedBox(height: compact ? 6 : 10),
-        if (compact)
-          Row(
-            children: [
-              for (int i = 0; i < shown.length; i++) ...[
-                if (i > 0) const SizedBox(width: 5),
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 3.5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: doneNames.contains(shown[i])
-                          ? accent.withAlpha(28)
-                          : Colors.white.withAlpha(10),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: doneNames.contains(shown[i])
-                            ? accent.withAlpha(120)
-                            : Colors.white.withAlpha(20),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          doneNames.contains(shown[i])
-                              ? Icons.check_circle_rounded
-                              : Icons.radio_button_unchecked_rounded,
-                          size: 10,
-                          color: doneNames.contains(shown[i])
-                              ? accent
-                              : Colors.white30,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            shown[i],
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: doneNames.contains(shown[i])
-                                  ? Colors.white
-                                  : Colors.white54,
-                              fontSize: 9.5,
-                              fontWeight: doneNames.contains(shown[i])
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-              if (extra > 0) ...[
-                const SizedBox(width: 5),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 3.5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(10),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '+$extra',
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          )
-        else
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final name in shown)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 142),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: doneNames.contains(name)
-                          ? accent.withAlpha(28)
-                          : Colors.white.withAlpha(10),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: doneNames.contains(name)
-                            ? accent.withAlpha(120)
-                            : Colors.white.withAlpha(20),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          doneNames.contains(name)
-                              ? Icons.check_circle_rounded
-                              : Icons.radio_button_unchecked_rounded,
-                          size: 12,
-                          color: doneNames.contains(name)
-                              ? accent
-                              : Colors.white30,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: doneNames.contains(name)
-                                  ? Colors.white
-                                  : Colors.white54,
-                              fontSize: 10.5,
-                              fontWeight: doneNames.contains(name)
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              if (extra > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(10),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    AppL.moreExercisesCount.replaceAll('{n}', '$extra'),
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-      ],
-    );
-  }
-}
-
-class _ShareSheetScaffold extends StatelessWidget {
-  final String title;
-  final Color accent;
-  final Widget cardPreview;
-  final List<Widget> toggles;
-  final bool sharing;
-  final String buttonLabel;
-  final VoidCallback onShare;
-
-  const _ShareSheetScaffold({
-    required this.title,
-    required this.accent,
-    required this.cardPreview,
-    required this.toggles,
-    required this.sharing,
-    required this.buttonLabel,
-    required this.onShare,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = _isDarkCtx(context);
-    final ctaFg = _shareCtaFg(accent);
-    return Container(
-      decoration: BoxDecoration(
-        color: dark ? const Color(0xFF161618) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        16,
-        14,
-        16,
-        _bottomNavInset(context) + MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: dark ? Colors.white24 : Colors.black26,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: dark ? Colors.white : Colors.black87,
-                fontWeight: FontWeight.w800,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 12),
-            cardPreview,
-            if (toggles.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.center,
-                children: toggles,
-              ),
-            ],
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: sharing ? null : onShare,
-                icon: sharing
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: ctaFg,
-                        ),
-                      )
-                    : const Icon(Icons.share_rounded),
-                label: Text(buttonLabel),
-                style: FilledButton.styleFrom(
-                  backgroundColor: accent,
-                  foregroundColor: ctaFg,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ShareToggleChip extends StatelessWidget {
-  final String label;
-  final bool active;
-  final Color accent;
-  final VoidCallback onTap;
-
-  const _ShareToggleChip({
-    required this.label,
-    required this.active,
-    required this.accent,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = _isDarkCtx(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active
-              ? accent.withAlpha(38)
-              : (dark ? Colors.white10 : Colors.black.withAlpha(10)),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: active
-                ? accent
-                : (dark ? Colors.white24 : Colors.black26),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? accent : (dark ? Colors.white54 : Colors.black54),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── SHARE WORKOUT IMAGE SHEET ────────────────────────────────────────────────
 class _WorkoutExShareRow {
   final String name;
   final String displaySet;
@@ -10933,10 +10300,9 @@ class _WorkoutShareSheet extends StatefulWidget {
 
 class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
   bool _showStreak = true;
-  bool _showWeeklyBadges = true;
-  bool _showSessionProgress = true;
+  bool _showWeeklyBadges = false;
+  bool _showSessionProgress = false;
   bool _showExercises = true;
-  bool _showRecords = true;
   bool _showDuration = true;
   bool _sharing = false;
   final GlobalKey _cardKey = GlobalKey();
@@ -11035,551 +10401,226 @@ class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
 
   Widget _buildCard(Color accent) {
     final rows = _analyzeExercises();
-    final improvedCount = rows.where((r) => r.improved).length;
-    final durLabel = _shareDurationLabel(widget.durationMinutes);
-    final hasDuration = _showDuration && durLabel.isNotEmpty;
-    final hasRecords = _showRecords && widget.records.isNotEmpty;
-    final microNames = widget.allSessionNames.isNotEmpty
-        ? widget.allSessionNames
-        : widget.streakDoneNames.toList();
-    final hasMicro = _showWeeklyBadges && microNames.isNotEmpty;
-    final hasProgress = _showSessionProgress && widget.progressPercent != null;
-
-    // Hero block decision: prioritize session % delta, fallback to PR/duration/exercises
-    final String heroEyebrow;
-    final String heroValue;
-    final Color heroColor;
-    if (hasProgress) {
-      final pct = widget.progressPercent!;
-      heroEyebrow = AppL.vsPreviousSession.toUpperCase();
-      heroValue = '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}%';
-      heroColor = pct >= 0.05 ? _kUp : (pct <= -0.05 ? _kDown : accent);
-    } else if (hasRecords) {
-      heroEyebrow = AppL.newPersonalRecord.toUpperCase();
-      heroValue = '${widget.records.length} PR';
-      heroColor = _kShareGold;
-    } else if (hasDuration) {
-      heroEyebrow = AppL.workoutDuration.toUpperCase();
-      heroValue = durLabel.toUpperCase();
-      heroColor = accent;
-    } else {
-      heroEyebrow = (widget.progressPercent == null
-              ? AppL.firstSession
-              : AppL.exercises)
-          .toUpperCase();
-      heroValue = '${rows.length}';
-      heroColor = accent;
-    }
-
-    int maxExRows = 5;
-    if (hasRecords) maxExRows--;
-    if (hasMicro && widget.records.length >= 2) maxExRows--;
-    maxExRows = maxExRows.clamp(3, 5);
-    final shownRows = rows.take(maxExRows).toList();
-    final extraRows = rows.length - shownRows.length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Top meta strip: Date + Duration pill
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                widget.todayLabel.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.8,
+    final dur = _showDuration ? _shareDurationLabel(widget.durationMinutes) : '';
+    const green = Color(0xFF4CD97B);
+    return Container(
+      width: 360,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0E0E10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withAlpha(80)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/icon_client.png',
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Icon(Icons.fitness_center_rounded, size: 28),
                 ),
               ),
-            ),
-            if (hasDuration) ...[
-              const SizedBox(width: 8),
-              Flexible(
-                flex: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 4,
-                  ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'GymApp',
+                      style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    Text(
+                      '${widget.dayName} · ${widget.todayLabel}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              if (dur.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(14),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(color: Colors.white.withAlpha(28)),
+                    color: Colors.white.withAlpha(10),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white12),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.timer_outlined, size: 12, color: accent),
+                      Icon(Icons.timer_outlined, color: accent, size: 14),
                       const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          durLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            fontFeatures: [ui.FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ),
+                      Text(dur, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 10),
-        // Workout Day Title
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 3.5,
-              height: 24,
-              decoration: BoxDecoration(
-                color: accent,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                widget.dayName.toUpperCase(),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  height: 1.08,
-                  letterSpacing: 0.6,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        // Hero Metric Zone
-        Text(
-          heroEyebrow,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Colors.white54,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.8,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              heroValue,
-              style: TextStyle(
-                color: heroColor,
-                fontSize: 54,
-                fontWeight: FontWeight.w900,
-                height: 0.96,
-                letterSpacing: -2.0,
-                fontFeatures: const [ui.FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-        ),
-        if (improvedCount > 0 || (hasRecords && hasProgress)) ...[
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              if (improvedCount > 0)
-                _heroPill(
-                  icon: Icons.trending_up_rounded,
-                  label: AppL.improvedCount
-                      .replaceAll('{n}', '$improvedCount'),
-                  color: _kUp,
-                ),
-              if (hasRecords && hasProgress)
-                _heroPill(
-                  icon: Icons.emoji_events_rounded,
-                  label: '${widget.records.length} PR',
-                  color: _kShareGold,
-                ),
             ],
           ),
-        ],
-        // Personal Records Highlight Ribbon
-        if (hasRecords) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              color: _kShareGold.withAlpha(20),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _kShareGold.withAlpha(110)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+          const SizedBox(height: 14),
+          if (_showExercises) ...[
+            const Divider(color: Colors.white12),
+            const SizedBox(height: 8),
+            // record e migliorati in cima, con il delta rispetto alla volta scorsa
+            for (final r in rows)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
                   children: [
-                    const Icon(
-                      Icons.emoji_events_rounded,
-                      color: _kShareGold,
-                      size: 13.5,
-                    ),
-                    const SizedBox(width: 6),
+                    if (r.isRecord || r.improved) ...[
+                      Icon(r.isRecord ? Icons.emoji_events_rounded : Icons.trending_up_rounded,
+                          size: 13, color: r.isRecord ? Colors.amber : green),
+                      const SizedBox(width: 5),
+                    ],
                     Expanded(
                       child: Text(
-                        AppL.personalRecords.toUpperCase(),
-                        maxLines: 1,
+                        r.name,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: _kShareGold,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.4,
-                        ),
                       ),
                     ),
-                    if (widget.records.length > 2)
-                      Flexible(
-                        flex: 0,
-                        child: Text(
-                          AppL.moreExercisesCount
-                              .replaceAll('{n}', '${widget.records.length - 2}'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: _kShareGold,
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+                    Text(
+                      r.displaySet,
+                      style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                    if (r.deltaLabel != null) ...[
+                      const SizedBox(width: 6),
+                      Text(r.deltaLabel!, style: const TextStyle(color: green, fontSize: 11, fontWeight: FontWeight.w800)),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 5),
-                for (final rec in widget.records.take(2))
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            rec.exercise,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          flex: 0,
-                          child: Text(
-                            rec.w > 0
-                                ? '${_shareWeightLabel(rec.w, widget.usePounds)} × ${rec.r}'
-                                : '${rec.r} reps',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: _kShareGold,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900,
-                              fontFeatures: [ui.FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-        // Improved / Completed Exercises List
-        if (_showExercises && shownRows.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  (improvedCount > 0 ? AppL.improvedToday : AppL.exercises)
-                      .toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.6,
-                  ),
-                ),
               ),
-              if (improvedCount > 0) ...[
-                const SizedBox(width: 8),
-                Flexible(
-                  flex: 0,
-                  child: Text(
-                    '$improvedCount/${rows.length}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: _kUp,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      fontFeatures: [ui.FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(9),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withAlpha(20)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final row in shownRows)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3.5),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 14,
-                          child: Center(
-                            child: row.isRecord
-                                ? const Icon(
-                                    Icons.emoji_events_rounded,
-                                    size: 12.5,
-                                    color: _kShareGold,
-                                  )
-                                : row.improved
-                                    ? const Icon(
-                                        Icons.north_east_rounded,
-                                        size: 12.5,
-                                        color: _kUp,
-                                      )
-                                    : Container(
-                                        width: 5,
-                                        height: 5,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white24,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            row.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: (row.improved || row.isRecord)
-                                  ? Colors.white
-                                  : Colors.white70,
-                              fontSize: 11.5,
-                              fontWeight: (row.improved || row.isRecord)
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          flex: 0,
-                          child: Text(
-                            row.displaySet,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: (row.improved || row.isRecord)
-                                  ? Colors.white
-                                  : Colors.white70,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              fontFeatures: const [
-                                ui.FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                        ),
-                        if (row.deltaLabel != null) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _kUp.withAlpha(28),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              row.deltaLabel!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: _kUp,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                fontFeatures: [ui.FontFeature.tabularFigures()],
-                              ),
-                            ),
-                          ),
-                        ] else if (row.isRecord) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _kShareGold.withAlpha(28),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'PR',
-                              style: TextStyle(
-                                color: _kShareGold,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                if (extraRows > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                      AppL.moreExercisesCount.replaceAll('{n}', '$extraRows'),
-                      style: const TextStyle(
-                        color: Colors.white38,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-        const Spacer(),
-        // Bottom Streak & Microcycle Module
-        if (_showStreak || hasMicro) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(9),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withAlpha(18)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
+            const SizedBox(height: 8),
+          ],
+          if (_showStreak || _showWeeklyBadges || _showSessionProgress) ...[
+            const Divider(color: Colors.white12),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 if (_showStreak)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.local_fire_department_rounded,
-                        color: accent,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          'Streak · ${widget.streak} ${AppL.microAbbr}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            fontFeatures: [ui.FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                if (_showStreak && hasMicro) const SizedBox(height: 6),
-                if (hasMicro)
-                  _ShareMicrocycleBar(
-                    allNames: microNames,
-                    doneNames: widget.streakDoneNames,
+                  _badgeChip(
+                    icon: Icons.local_fire_department_rounded,
+                    label: 'Streak',
+                    value: '${widget.streak} ${AppL.microAbbr}',
                     accent: accent,
-                    maxPills: 3,
-                    compact: true,
+                  ),
+                if (_showSessionProgress && widget.progressPercent != null)
+                  _badgeChip(
+                    icon: widget.progressPercent! >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                    label: AppL.vsPrev,
+                    value: '${widget.progressPercent! >= 0 ? '+' : ''}${widget.progressPercent!.toStringAsFixed(1)}%',
+                    accent: widget.progressPercent! >= 0 ? const Color(0xFF4CD97B) : const Color(0xFFFF6B6B),
                   ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
+            if (_showWeeklyBadges) ...[
+              const SizedBox(height: 8),
+              Builder(builder: (ctx) {
+                final names = widget.allSessionNames.isNotEmpty
+                    ? widget.allSessionNames
+                    : widget.streakDoneNames.toList();
+                final doneCount = widget.streakDoneNames.length;
+                final total = names.length;
+                return SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      alignment: WrapAlignment.center,
+                      runAlignment: WrapAlignment.center,
+                      children: names.map((name) {
+                        final done = widget.streakDoneNames.contains(name);
+                        return Container(
+                          width: 60,
+                          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color: done ? accent.withAlpha(36) : Colors.white10,
+                            border: Border.all(color: done ? accent.withAlpha(140) : Colors.white12),
+                          ),
+                          child: Column(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: ColorFiltered(
+                                  colorFilter: done
+                                      ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
+                                      : const ColorFilter.matrix([
+                                          0.2126, 0.7152, 0.0722, 0, 0,
+                                          0.2126, 0.7152, 0.0722, 0, 0,
+                                          0.2126, 0.7152, 0.0722, 0, 0,
+                                          0,      0,      0,      1, 0,
+                                        ]),
+                                  child: Transform.scale(
+                                    scale: 1.18,
+                                    child: Image.asset('assets/icon_client.png', width: 28, height: 28,
+                                        errorBuilder: (_, __, ___) => Icon(Icons.fitness_center, color: done ? Colors.white : Colors.white24, size: 24)),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                name,
+                                style: TextStyle(fontSize: 7, color: done ? Colors.white : Colors.white38, fontWeight: FontWeight.w700),
+                                textAlign: TextAlign.center, overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$doneCount/$total ${AppL.thisMicrocycleLabel}',
+                      style: const TextStyle(color: Colors.white54, fontSize: 9),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  ),
+                );
+              }),
+            ],
+            const SizedBox(height: 4),
+          ],
         ],
-        _ShareBrandFooter(accent: accent),
-      ],
+      ),
     );
   }
 
-  Widget _heroPill({
+  Widget _badgeChip({
     required IconData icon,
     required String label,
-    required Color color,
+    required String value,
+    required Color accent,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withAlpha(28),
-        borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: color.withAlpha(90)),
+        color: Colors.white.withAlpha(10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
         children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: color,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w800,
-                fontFeatures: const [ui.FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
+          Icon(icon, color: accent, size: 18),
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
         ],
       ),
     );
@@ -11589,9 +10630,16 @@ class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
     if (_sharing) return;
     setState(() => _sharing = true);
     try {
-      await _shareCapturedCard(
-        cardKey: _cardKey,
-        fileName: 'gymapp_workout.png',
+      final boundary = _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final image = await boundary.toImage(pixelRatio: 4.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/gymapp_workout.png');
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png')],
         text: '',
       );
     } finally {
@@ -11602,63 +10650,114 @@ class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
   @override
   Widget build(BuildContext context) {
     final accent = widget.accent;
-    final hasDuration = _shareDurationLabel(widget.durationMinutes).isNotEmpty;
-    final hasMicro =
-        widget.allSessionNames.isNotEmpty || widget.streakDoneNames.isNotEmpty;
-    return _ShareSheetScaffold(
-      title: AppL.shareWorkout,
-      accent: accent,
-      cardPreview: _ShareStoryCanvas(
-        cardKey: _cardKey,
-        accent: accent,
-        child: _buildCard(accent),
+    return Container(
+      decoration: BoxDecoration(
+        color: _isDarkCtx(context) ? const Color(0xFF1C1C1E) : Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      toggles: [
-        _ShareToggleChip(
-          label: AppL.exercises,
-          active: _showExercises,
-          accent: accent,
-          onTap: () => setState(() => _showExercises = !_showExercises),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        _bottomNavInset(context) + MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: _isDarkCtx(context) ? Colors.white24 : Colors.black26, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            AppL.shareWorkout,
+            style: TextStyle(color: _isDarkCtx(context) ? Colors.white : Colors.black87, fontWeight: FontWeight.w700, fontSize: 16),
+          ),
+          const SizedBox(height: 14),
+          RepaintBoundary(key: _cardKey, child: _buildCard(accent)),
+          const SizedBox(height: 16),
+          // Badge toggles
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              _toggleChip(
+                AppL.exercises,
+                _showExercises,
+                () => setState(() => _showExercises = !_showExercises),
+                accent,
+              ),
+              if (_shareDurationLabel(widget.durationMinutes).isNotEmpty)
+                _toggleChip(
+                  AppL.workoutDuration,
+                  _showDuration,
+                  () => setState(() => _showDuration = !_showDuration),
+                  accent,
+                ),
+              _toggleChip(
+                'Streak',
+                _showStreak,
+                () => setState(() => _showStreak = !_showStreak),
+                accent,
+              ),
+              _toggleChip(
+                AppL.microcycleBadges,
+                _showWeeklyBadges,
+                () => setState(() => _showWeeklyBadges = !_showWeeklyBadges),
+                accent,
+              ),
+              if (widget.progressPercent != null)
+                _toggleChip(
+                  AppL.vsPrevious,
+                  _showSessionProgress,
+                  () => setState(() => _showSessionProgress = !_showSessionProgress),
+                  accent,
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _sharing ? null : _share,
+              icon: _sharing
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                  : const Icon(Icons.share_rounded),
+              label: Text(AppL.shareImage),
+              style: FilledButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _toggleChip(String label, bool active, VoidCallback onTap, Color c) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? c.withAlpha(40) : (_isDarkCtx(context) ? Colors.white10 : Colors.black.withAlpha(10)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: active ? c : (_isDarkCtx(context) ? Colors.white24 : Colors.black26)),
         ),
-        if (widget.records.isNotEmpty)
-          _ShareToggleChip(
-            label: AppL.chartRecord,
-            active: _showRecords,
-            accent: accent,
-            onTap: () => setState(() => _showRecords = !_showRecords),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? c : (_isDarkCtx(context) ? Colors.white54 : Colors.black54),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
           ),
-        if (hasDuration)
-          _ShareToggleChip(
-            label: AppL.workoutDuration,
-            active: _showDuration,
-            accent: accent,
-            onTap: () => setState(() => _showDuration = !_showDuration),
-          ),
-        _ShareToggleChip(
-          label: 'Streak',
-          active: _showStreak,
-          accent: accent,
-          onTap: () => setState(() => _showStreak = !_showStreak),
         ),
-        if (hasMicro)
-          _ShareToggleChip(
-            label: AppL.microcycleBadges,
-            active: _showWeeklyBadges,
-            accent: accent,
-            onTap: () => setState(() => _showWeeklyBadges = !_showWeeklyBadges),
-          ),
-        if (widget.progressPercent != null)
-          _ShareToggleChip(
-            label: AppL.vsPrevious,
-            active: _showSessionProgress,
-            accent: accent,
-            onTap: () =>
-                setState(() => _showSessionProgress = !_showSessionProgress),
-          ),
-      ],
-      sharing: _sharing,
-      buttonLabel: AppL.shareImage,
-      onShare: _share,
+      ),
     );
   }
 }
@@ -11685,187 +10784,136 @@ class _StreakShareSheetState extends State<_StreakShareSheet> {
   final GlobalKey _cardKey = GlobalKey();
 
   Widget _buildStoryCard() {
-    final accent = widget.accent;
-    final total = widget.allSessionNames.length;
-    final doneCount = widget.allSessionNames
-        .where((n) => widget.streakDoneNames.contains(n))
-        .length;
-    final complete = total > 0 && doneCount >= total;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Top header bar
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'STREAK',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: accent,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2.2,
-                ),
-              ),
-            ),
-            if (total > 0) ...[
-              const SizedBox(width: 8),
-              Flexible(
-                flex: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: (complete ? _kUp : accent).withAlpha(28),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(
-                      color: (complete ? _kUp : accent).withAlpha(110),
+    return Container(
+      width: 340,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: const Color(0xFF0E0E10),
+        border: Border.all(color: widget.accent.withAlpha(80)),
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Header with icon + name
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assets/icon_client.png',
+                        width: 48,
+                        height: 48,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: Colors.white, size: 28),
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    '$doneCount/$total',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: complete ? _kUp : accent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      fontFeatures: const [ui.FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const Spacer(),
-        // Centerpiece Streak Hero
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: accent.withAlpha(24),
-                  border: Border.all(color: accent.withAlpha(90)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: accent.withAlpha(55),
-                      blurRadius: 28,
-                      spreadRadius: 2,
+                    const SizedBox(width: 8),
+                    Text(
+                      'GymApp',
+                      style: TextStyle(
+                        color: widget.accent,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 26,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.local_fire_department_rounded,
-                  color: accent,
-                  size: 40,
-                ),
-              ),
-              const SizedBox(height: 14),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
+                const SizedBox(height: 32),
+                Icon(Icons.local_fire_department_rounded, color: widget.accent, size: 44),
+                const SizedBox(height: 4),
+                Text(
                   '${widget.streak}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 96,
+                    fontSize: 88,
                     fontWeight: FontWeight.w900,
                     height: 0.9,
-                    letterSpacing: -4,
-                    fontFeatures: const [ui.FontFeature.tabularFigures()],
-                    shadows: [
-                      Shadow(
-                        color: accent.withAlpha(75),
-                        blurRadius: 24,
-                      ),
-                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                AppL.streakOnFire.toUpperCase(),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: accent,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2.0,
+                const SizedBox(height: 8),
+                Text(
+                  AppL.streakOnFire,
+                  style: TextStyle(
+                    color: widget.accent,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-              if (complete) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
+                const SizedBox(height: 32),
+                // Weekly badges: session circles
+                if (_showBadges && widget.allSessionNames.isNotEmpty) ...[
+                  Text(
+                    AppL.thisMicrocycle,
+                    style: const TextStyle(color: Colors.white38, fontSize: 12),
                   ),
-                  decoration: BoxDecoration(
-                    color: _kUp.withAlpha(28),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(color: _kUp.withAlpha(110)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.verified_rounded,
-                        size: 13,
-                        color: _kUp,
-                      ),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          AppL.microcycleComplete.toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: _kUp,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: List.generate(widget.allSessionNames.length, (i) {
+                      final name = widget.allSessionNames[i];
+                      final done = widget.streakDoneNames.contains(name);
+                      return Container(
+                        width: 72,
+                        height: 84,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: done ? widget.accent.withAlpha(36) : Colors.white10,
+                          border: Border.all(
+                            color: done ? widget.accent.withAlpha(140) : Colors.white12,
                           ),
                         ),
-                      ),
-                    ],
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: done
+                                  ? Image.asset('assets/icon_client.png', width: 36, height: 36,
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: Colors.white, size: 32))
+                                  : ColorFiltered(
+                                      colorFilter: const ColorFilter.matrix([
+                                        0.2126, 0.7152, 0.0722, 0, 0,
+                                        0.2126, 0.7152, 0.0722, 0, 0,
+                                        0.2126, 0.7152, 0.0722, 0, 0,
+                                        0,      0,      0,      0.3, 0,
+                                      ]),
+                                      child: Image.asset('assets/icon_client.png', width: 36, height: 36,
+                                          errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: Colors.white24, size: 32)),
+                                    ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              name,
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: done ? Colors.white : Colors.white24,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
                   ),
-                ),
+                ],
+                const SizedBox(height: 20),
               ],
-            ],
-          ),
-        ),
-        const Spacer(),
-        // Microcycle Card
-        if (_showBadges && widget.allSessionNames.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(9),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withAlpha(20)),
-            ),
-            child: _ShareMicrocycleBar(
-              allNames: widget.allSessionNames,
-              doneNames: widget.streakDoneNames,
-              accent: accent,
-              maxPills: 8,
             ),
           ),
-          const SizedBox(height: 16),
         ],
-        _ShareBrandFooter(accent: accent),
-      ],
+      ),
     );
   }
 
@@ -11873,9 +10921,16 @@ class _StreakShareSheetState extends State<_StreakShareSheet> {
     if (_sharing) return;
     setState(() => _sharing = true);
     try {
-      await _shareCapturedCard(
-        cardKey: _cardKey,
-        fileName: 'gymapp_streak.png',
+      final boundary = _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final image = await boundary.toImage(pixelRatio: 4.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/gymapp_streak.png');
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png')],
         text: AppL.streakFireMsg.replaceAll('{n}', '${widget.streak}'),
       );
     } finally {
@@ -11885,27 +10940,85 @@ class _StreakShareSheetState extends State<_StreakShareSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = widget.accent;
-    return _ShareSheetScaffold(
-      title: AppL.shareStreakFire,
-      accent: accent,
-      cardPreview: _ShareStoryCanvas(
-        cardKey: _cardKey,
-        accent: accent,
-        child: _buildStoryCard(),
+    return Container(
+      decoration: BoxDecoration(
+        color: _isDarkCtx(context) ? const Color(0xFF1C1C1E) : Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      toggles: [
-        if (widget.allSessionNames.isNotEmpty)
-          _ShareToggleChip(
-            label: AppL.badgesIcon,
-            active: _showBadges,
-            accent: accent,
-            onTap: () => setState(() => _showBadges = !_showBadges),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        _bottomNavInset(context) + MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: _isDarkCtx(context) ? Colors.white24 : Colors.black26, borderRadius: BorderRadius.circular(2)),
           ),
-      ],
-      sharing: _sharing,
-      buttonLabel: AppL.shareToStories,
-      onShare: _share,
+          const SizedBox(height: 16),
+          Text(
+            AppL.shareStreakFire,
+            style: TextStyle(color: _isDarkCtx(context) ? Colors.white : Colors.black87, fontWeight: FontWeight.w700, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          // Composer toggles
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _toggleChip(
+                label: AppL.badgesIcon,
+                active: _showBadges,
+                onTap: () => setState(() => _showBadges = !_showBadges),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          RepaintBoundary(key: _cardKey, child: _buildStoryCard()),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _sharing ? null : _share,
+              icon: _sharing
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                  : const Icon(Icons.share_rounded),
+              label: Text(AppL.shareToStories),
+              style: FilledButton.styleFrom(
+                backgroundColor: widget.accent,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _toggleChip({required String label, required bool active, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? widget.accent.withAlpha(40) : (_isDarkCtx(context) ? Colors.white10 : Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: active ? widget.accent : (_isDarkCtx(context) ? Colors.white24 : Colors.grey.shade400)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: active ? widget.accent : (_isDarkCtx(context) ? Colors.white54 : Colors.black54),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -11917,13 +11030,11 @@ class _ProgressShareSheet extends StatefulWidget {
   final List<_SessionPoint> points;
   final List<_ExTrend> top;
   final Color accent;
-  final bool usePounds;
   const _ProgressShareSheet({
     required this.streak,
     required this.points,
     required this.top,
     required this.accent,
-    this.usePounds = false,
   });
   @override
   State<_ProgressShareSheet> createState() => _ProgressShareSheetState();
@@ -11941,9 +11052,16 @@ class _ProgressShareSheetState extends State<_ProgressShareSheet> {
     if (_sharing) return;
     setState(() => _sharing = true);
     try {
-      await _shareCapturedCard(
-        cardKey: _cardKey,
-        fileName: 'gymapp_progress.png',
+      final boundary = _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final image = await boundary.toImage(pixelRatio: 4.0);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) return;
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/gymapp_progress.png');
+      await file.writeAsBytes(bytes.buffer.asUint8List());
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png')],
         text: AppL.myGymProgress,
       );
     } finally {
@@ -11951,374 +11069,241 @@ class _ProgressShareSheetState extends State<_ProgressShareSheet> {
     }
   }
 
-  Widget _tile(String value, String label, Color color, {IconData? icon}) =>
-      Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withAlpha(9),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withAlpha(18)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 13, color: color),
-                    const SizedBox(width: 4),
-                  ],
-                  Expanded(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        value,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          fontFeatures: const [ui.FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.1,
-                ),
-              ),
-            ],
-          ),
+  Widget _tile(String value, String label, Color color) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w800)),
         ),
-      );
+        const SizedBox(height: 2),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+      ]),
+    ),
+  );
 
-  Widget _buildCard(BuildContext context) {
+  Widget _buildCard() {
     final accent = widget.accent;
     final pts = widget.points;
     final values = pts.map((p) => p.score).toList();
     final trend = pts.length >= 2 && pts.first.score > 0
         ? (pts.last.score - pts.first.score) / pts.first.score * 100
         : 0.0;
-    final isMicro =
-        pts.isNotEmpty && pts.first.dayName.startsWith('Microciclo');
+    final isMicro = pts.isNotEmpty && pts.first.dayName.startsWith('Microciclo');
     var lo = values.isEmpty ? 0.0 : values.reduce((a, b) => a < b ? a : b);
     var hi = values.isEmpty ? 1.0 : values.reduce((a, b) => a > b ? a : b);
     final span = (hi - lo).abs() < 1 ? 1.0 : hi - lo;
     lo = (lo - span * 0.15).clamp(0.0, double.infinity);
     hi += span * 0.15;
-
-    final hasTrendHero = _includeTrend && pts.length >= 2;
-    final String heroEyebrow;
-    final String heroValue;
-    final Color heroColor;
-    if (hasTrendHero) {
-      heroEyebrow = 'TREND';
-      heroValue = '${trend >= 0 ? '+' : ''}${trend.toStringAsFixed(0)}%';
-      heroColor = trend >= 0 ? _kUp : _kDown;
-    } else if (_includeSessionCount) {
-      heroEyebrow = (isMicro ? AppL.microcycles : AppL.sessions).toUpperCase();
-      heroValue = '${pts.length}';
-      heroColor = accent;
-    } else {
-      heroEyebrow = 'STREAK';
-      heroValue = '${widget.streak}';
-      heroColor = accent;
-    }
-
     final tiles = <Widget>[
-      if (_includeSessionCount && hasTrendHero)
-        _tile(
-          '${pts.length}',
-          isMicro ? AppL.microcycles : AppL.sessions,
-          Colors.white,
-        ),
-      if (_includeStreak && (hasTrendHero || _includeSessionCount))
-        _tile(
-          '${widget.streak} ${AppL.microAbbr}',
-          'Streak',
-          accent,
-          icon: Icons.local_fire_department_rounded,
-        ),
+      if (_includeSessionCount) _tile('${pts.length}', isMicro ? AppL.microcycles : AppL.sessions, Colors.white),
+      if (_includeStreak) _tile('${widget.streak}', 'Streak', accent),
+      if (_includeTrend && pts.length >= 2)
+        _tile('${trend >= 0 ? '+' : ''}${trend.toStringAsFixed(0)}%', 'Trend', trend >= 0 ? _kUp : _kDown),
     ];
-
     final now = DateTime.now();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Top header bar
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                AppL.overallProgress.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: accent,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.8,
-                ),
+    return Container(
+      width: 360,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0E0E10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withAlpha(80)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/icon_client.png',
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox(width: 36, height: 36),
               ),
             ),
-            const SizedBox(width: 8),
-            Flexible(
-              flex: 0,
-              child: Text(
-                '${now.day}/${now.month}/${now.year}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: [ui.FontFeature.tabularFigures()],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('GymApp',
+                      style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 1.2)),
+                  Text(
+                    '${AppL.overallProgress} · ${now.day}/${now.month}/${now.year}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ]),
+          if (values.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 140,
+              child: CustomPaint(
+                painter: PTChartPainter(
+                  values: values,
+                  tops: const [],
+                  dates: pts.map<DateTime?>((p) => p.date).toList(),
+                  lo: lo,
+                  hi: hi,
+                  sel: values.length - 1,
+                  accent: accent,
+                  dark: true,
                 ),
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 12),
-        // Hero Trend / Stat
-        Text(
-          heroEyebrow,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Colors.white54,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.8,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              heroValue,
-              style: TextStyle(
-                color: heroColor,
-                fontSize: 54,
-                fontWeight: FontWeight.w900,
-                height: 0.96,
-                letterSpacing: -2.0,
-                fontFeatures: const [ui.FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-        ),
-        if (tiles.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Row(
-            children: [
+          if (tiles.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Row(children: [
               for (int i = 0; i < tiles.length; i++) ...[
                 if (i > 0) const SizedBox(width: 8),
                 tiles[i],
               ],
-            ],
-          ),
-        ],
-        if (values.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(9),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withAlpha(20)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  (isMicro
-                          ? AppL.progressPerMicrocycle
-                          : AppL.progressPerSession)
-                      .toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
-                  ),
+            ]),
+          ],
+          if (_includeTop && widget.top.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            ...widget.top.take(3).map((t) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(children: [
+                Expanded(
+                  child: Text(t.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 126,
-                  child: CustomPaint(
-                    painter: PTChartPainter(
-                      values: values,
-                      tops: const [],
-                      dates: pts.map<DateTime?>((p) => p.date).toList(),
-                      lo: lo,
-                      hi: hi,
-                      sel: values.length - 1,
-                      accent: accent,
-                      dark: true,
-                      fontFamily: DefaultTextStyle.of(context).style.fontFamily,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+                const SizedBox(width: 8),
+                Text('+${t.delta.toStringAsFixed(0)}%',
+                    style: const TextStyle(color: _kUp, fontWeight: FontWeight.w800, fontSize: 13)),
+              ]),
+            )),
+          ],
         ],
-        if (_includeTop && widget.top.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            AppL.topProgress.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 9.5,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.6,
-            ),
+      ),
+    );
+  }
+
+  Widget _toggleChip({required String label, required bool active, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? widget.accent.withAlpha(40) : (_isDarkCtx(context) ? Colors.white10 : Colors.black.withAlpha(10)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: active ? widget.accent : (_isDarkCtx(context) ? Colors.white24 : Colors.black26)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: active ? widget.accent : (_isDarkCtx(context) ? Colors.white54 : Colors.black54),
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(9),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withAlpha(18)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final t in widget.top.take(3))
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3.5),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.north_east_rounded,
-                          size: 13,
-                          color: _kUp,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            t.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          flex: 0,
-                          child: Text(
-                            t.bodyweight || t.lastW <= 0
-                                ? '${t.lastR} reps'
-                                : '${_shareWeightLabel(t.lastW, widget.usePounds)} × ${t.lastR}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white60,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              fontFeatures: [ui.FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _kUp.withAlpha(28),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '+${t.delta.toStringAsFixed(0)}%',
-                            style: const TextStyle(
-                              color: _kUp,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 10.5,
-                              fontFeatures: [ui.FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-        const Spacer(),
-        _ShareBrandFooter(accent: accent),
-      ],
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final accent = widget.accent;
-    return _ShareSheetScaffold(
-      title: AppL.shareProgress,
-      accent: accent,
-      cardPreview: _ShareStoryCanvas(
-        cardKey: _cardKey,
-        accent: accent,
-        child: _buildCard(context),
+    return Container(
+      decoration: BoxDecoration(
+        color: _isDarkCtx(context) ? const Color(0xFF1C1C1E) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      toggles: [
-        _ShareToggleChip(
-          label: AppL.sessions,
-          active: _includeSessionCount,
-          accent: accent,
-          onTap: () =>
-              setState(() => _includeSessionCount = !_includeSessionCount),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        _bottomNavInset(context) + MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: _isDarkCtx(context) ? Colors.white24 : Colors.black26,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              AppL.shareProgress,
+              style: TextStyle(
+                color: _isDarkCtx(context) ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 14),
+            RepaintBoundary(key: _cardKey, child: _buildCard()),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                _toggleChip(
+                  label: AppL.sessions,
+                  active: _includeSessionCount,
+                  onTap: () => setState(() => _includeSessionCount = !_includeSessionCount),
+                ),
+                _toggleChip(
+                  label: 'Streak',
+                  active: _includeStreak,
+                  onTap: () => setState(() => _includeStreak = !_includeStreak),
+                ),
+                _toggleChip(
+                  label: 'Trend',
+                  active: _includeTrend,
+                  onTap: () => setState(() => _includeTrend = !_includeTrend),
+                ),
+                if (widget.top.isNotEmpty)
+                  _toggleChip(
+                    label: AppL.exercises,
+                    active: _includeTop,
+                    onTap: () => setState(() => _includeTop = !_includeTop),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _sharing ? null : _share,
+                icon: _sharing
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    : const Icon(Icons.share_rounded),
+                label: Text(AppL.shareImage),
+                style: FilledButton.styleFrom(
+                  backgroundColor: widget.accent,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
+          ],
         ),
-        _ShareToggleChip(
-          label: 'Streak',
-          active: _includeStreak,
-          accent: accent,
-          onTap: () => setState(() => _includeStreak = !_includeStreak),
-        ),
-        _ShareToggleChip(
-          label: 'Trend',
-          active: _includeTrend,
-          accent: accent,
-          onTap: () => setState(() => _includeTrend = !_includeTrend),
-        ),
-        if (widget.top.isNotEmpty)
-          _ShareToggleChip(
-            label: AppL.exercises,
-            active: _includeTop,
-            accent: accent,
-            onTap: () => setState(() => _includeTop = !_includeTop),
-          ),
-      ],
-      sharing: _sharing,
-      buttonLabel: AppL.shareImage,
-      onShare: _share,
+      ),
     );
   }
 }
@@ -12383,7 +11368,6 @@ Widget testProgressShareSheet({
       })>
       top,
   required Color accent,
-  bool usePounds = false,
 }) =>
     _ProgressShareSheet(
       streak: streak,
@@ -12408,7 +11392,6 @@ Widget testProgressShareSheet({
           ),
       ],
       accent: accent,
-      usePounds: usePounds,
     );
 
 // --- DRUM PICKERS ---

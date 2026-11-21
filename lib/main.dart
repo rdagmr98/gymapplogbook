@@ -1734,13 +1734,40 @@ class _ClientMainPageState extends State<ClientMainPage>
                 ]);
               },
             ),
-            _settingsGroup(AppL.sectionFeedback, [
-              _mainSettingRow(Icons.notifications_active_outlined, AppL.timerSound, _stTimerSound, (v) {
-                setState(() => _stTimerSound = v);
+            _settingsGroup(AppL.sets, [
+              _mainSegmentSettingRow(
+                Icons.straighten_rounded,
+                AppL.weightUnit,
+                selectedKey: _stUsePounds ? 'lb' : 'kg',
+                options: {'kg': 'KG', 'lb': AppL.pounds},
+                onChanged: (value) {
+                  setState(() => _stUsePounds = value == 'lb');
+                  _saveMainSettings();
+                },
+              ),
+              _mainSegmentSettingRow(
+                Icons.tune_rounded,
+                AppL.progressionMode,
+                sub: _stProgPreset
+                    ? (AppL.lang == 'en' ? 'Wheel already on target' : 'Ruota già sulla proposta')
+                    : (AppL.lang == 'en' ? 'Wheel on last weight with bounce' : 'Ruota sul peso scorso con invito'),
+                selectedKey: _stProgPreset ? 'preset' : 'nudge',
+                options: {'preset': AppL.progPreset, 'nudge': AppL.progNudge},
+                onChanged: (value) {
+                  setState(() => _stProgPreset = value == 'preset');
+                  _saveMainSettings();
+                },
+              ),
+              _mainSettingRow(Icons.trending_up_rounded, AppL.weightSuggestion, _stWeightHint, (v) {
+                setState(() => _stWeightHint = v);
                 _saveMainSettings();
               }),
-              _mainSettingRow(Icons.vibration, AppL.timerVibration, _stVibration, (v) {
-                setState(() => _stVibration = v);
+              _mainSettingRow(Icons.check_circle_outline_rounded, AppL.confirmSeriesWindow, _stConfirmSeries, (v) {
+                setState(() => _stConfirmSeries = v);
+                _saveMainSettings();
+              }),
+              _mainSettingRow(Icons.keyboard_hide_outlined, AppL.noKeyboard, _stDisableWeightKeyboard, (v) {
+                setState(() => _stDisableWeightKeyboard = v);
                 _saveMainSettings();
               }),
             ]),
@@ -1754,42 +1781,18 @@ class _ClientMainPageState extends State<ClientMainPage>
                 _saveMainSettings();
               }),
             ]),
-            _settingsGroup(AppL.sets, [
-              _mainSettingRow(Icons.check_circle_outline, AppL.confirmSeriesWindow, _stConfirmSeries, (v) {
-                setState(() => _stConfirmSeries = v);
+            _settingsGroup(AppL.sectionFeedback, [
+              _mainSettingRow(Icons.notifications_active_outlined, AppL.timerSound, _stTimerSound, (v) {
+                setState(() => _stTimerSound = v);
                 _saveMainSettings();
               }),
-              _mainSettingRow(Icons.trending_up, AppL.weightSuggestion, _stWeightHint, (v) {
-                setState(() => _stWeightHint = v);
-                _saveMainSettings();
-              }),
-              _mainSegmentSettingRow(
-                Icons.tune,
-                AppL.progressionMode,
-                selectedKey: _stProgPreset ? 'preset' : 'nudge',
-                options: {'preset': AppL.progPreset, 'nudge': AppL.progNudge},
-                onChanged: (value) {
-                  setState(() => _stProgPreset = value == 'preset');
-                  _saveMainSettings();
-                },
-              ),
-              _mainSegmentSettingRow(
-                Icons.straighten,
-                'Unità peso',
-                selectedKey: _stUsePounds ? 'lb' : 'kg',
-                options: {'kg': 'KG', 'lb': AppL.pounds},
-                onChanged: (value) {
-                  setState(() => _stUsePounds = value == 'lb');
-                  _saveMainSettings();
-                },
-              ),
-              _mainSettingRow(Icons.keyboard_hide_outlined, AppL.noKeyboard, _stDisableWeightKeyboard, (v) {
-                setState(() => _stDisableWeightKeyboard = v);
+              _mainSettingRow(Icons.vibration_rounded, AppL.timerVibration, _stVibration, (v) {
+                setState(() => _stVibration = v);
                 _saveMainSettings();
               }),
             ]),
             _settingsGroup(AppL.sectionAppearance, [
-              _mainSettingRow(Icons.brightness_medium, AppL.darkTheme, _stDarkMode, (v) async {
+              _mainSettingRow(Icons.brightness_medium_rounded, AppL.darkTheme, _stDarkMode, (v) async {
                 setState(() => _stDarkMode = v);
                 appThemeModeNotifier.value = v ? ThemeMode.dark : ThemeMode.light;
                 final prefs = await SharedPreferences.getInstance();
@@ -1803,8 +1806,14 @@ class _ClientMainPageState extends State<ClientMainPage>
                     Row(children: [
                       Icon(Icons.palette_outlined, color: accent, size: 20),
                       const SizedBox(width: 14),
-                      Text(AppL.sectionAccentColor[0] + AppL.sectionAccentColor.substring(1).toLowerCase(),
-                          style: TextStyle(color: textColor, fontSize: 14)),
+                      Expanded(
+                        child: Text(
+                          AppL.sectionAccentColor[0] + AppL.sectionAccentColor.substring(1).toLowerCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: textColor, fontSize: 14),
+                        ),
+                      ),
                     ]),
                     const SizedBox(height: 12),
                     Wrap(
@@ -1841,10 +1850,48 @@ class _ClientMainPageState extends State<ClientMainPage>
               ),
             ]),
             _settingsGroup(AppL.sectionTutorial, [
-              _navSettingRow(Icons.school_outlined, AppL.watchTutorial, _openTutorialFromSettings),
+              _navSettingRow(
+                Icons.school_outlined,
+                AppL.watchTutorial,
+                _openTutorialFromSettings,
+                sub: AppL.lang == 'en' ? 'Interactive guided workout' : 'Prova guidata interattiva',
+              ),
             ]),
             _settingsGroup(AppL.dataSection, [
-              _navSettingRow(Icons.storage_rounded, AppL.dataManagement, _openDataManagement, color: Colors.redAccent),
+              _navSettingRow(
+                Icons.send_rounded,
+                AppL.lang == 'en' ? 'Export progress (.gymlog)' : 'Esporta progressi (.gymlog)',
+                () {
+                  Navigator.pop(context);
+                  _exportData();
+                },
+                sub: AppL.lang == 'en' ? 'Send your history to the coach or save it' : 'Invia lo storico al coach o salvalo',
+              ),
+              _navSettingRow(
+                Icons.backup_rounded,
+                AppL.lang == 'en' ? 'Full backup (.gymbak)' : 'Backup completo (.gymbak)',
+                () {
+                  Navigator.pop(context);
+                  _exportFullBackup();
+                },
+                sub: AppL.lang == 'en' ? 'Saves plan, history, streak and settings' : 'Salva scheda, storico, streak e impostazioni',
+              ),
+              _navSettingRow(
+                Icons.restore_rounded,
+                AppL.lang == 'en' ? 'Restore backup' : 'Ripristina backup',
+                () {
+                  Navigator.pop(context);
+                  _importaBackupDaFile();
+                },
+                sub: AppL.lang == 'en' ? 'Open a saved .gymbak or .gymlog file' : 'Apri un file .gymbak o .gymlog salvato',
+              ),
+              _navSettingRow(
+                Icons.storage_rounded,
+                AppL.dataManagement,
+                _openDataManagement,
+                sub: AppL.lang == 'en' ? 'History, edit sets and reset' : 'Storico, modifica serie e reset',
+                color: Colors.redAccent,
+              ),
             ]),
           ],
         ),
@@ -1899,8 +1946,19 @@ class _ClientMainPageState extends State<ClientMainPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: TextStyle(color: color ?? onSurface, fontSize: 14)),
-                  if (sub != null) Text(sub, style: TextStyle(color: subClr, fontSize: 12)),
+                  Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: color ?? onSurface, fontSize: 14),
+                  ),
+                  if (sub != null)
+                    Text(
+                      sub,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: subClr, fontSize: 12),
+                    ),
                 ],
               ),
             ),
@@ -1943,10 +2001,12 @@ class _ClientMainPageState extends State<ClientMainPage>
     IconData icon,
     String label,
     bool value,
-    ValueChanged<bool> onChanged,
-  ) {
+    ValueChanged<bool> onChanged, {
+    String? sub,
+  }) {
     return Builder(builder: (ctx) {
       final textClr = Theme.of(ctx).colorScheme.onSurface;
+      final subClr = textClr.withAlpha(140);
       return InkWell(
         onTap: () => onChanged(!value),
         child: Padding(
@@ -1955,7 +2015,24 @@ class _ClientMainPageState extends State<ClientMainPage>
             Icon(icon, color: appAccentNotifier.value, size: 20),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(label, softWrap: true, style: TextStyle(color: textClr, fontSize: 14)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: textClr, fontSize: 14),
+                  ),
+                  if (sub != null)
+                    Text(
+                      sub,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: subClr, fontSize: 12),
+                    ),
+                ],
+              ),
             ),
             const SizedBox(width: 8),
             Switch(
@@ -1972,20 +2049,39 @@ class _ClientMainPageState extends State<ClientMainPage>
   Widget _mainSegmentSettingRow(
     IconData icon,
     String label, {
+    String? sub,
     required String selectedKey,
     required Map<String, String> options,
     required ValueChanged<String> onChanged,
   }) {
     final dark = _isDarkCtx(context);
     final accent = appAccentNotifier.value;
+    final fg = dark ? Colors.white : Colors.black87;
+    final subClr = fg.withAlpha(140);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
       child: Row(children: [
         Icon(icon, color: accent, size: 20),
         const SizedBox(width: 14),
         Expanded(
-          child: Text(label,
-              softWrap: true, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontSize: 14)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: fg, fontSize: 14),
+              ),
+              if (sub != null)
+                Text(
+                  sub,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: subClr, fontSize: 12),
+                ),
+            ],
+          ),
         ),
         const SizedBox(width: 8),
         Container(
@@ -3020,7 +3116,7 @@ class _ClientMainPageState extends State<ClientMainPage>
                   child: Icon(Icons.restore_rounded, color: accent, size: 20),
                 ),
                 title: Text(
-                  'Ripristina backup',
+                  AppL.lang == 'en' ? 'Restore backup' : 'Ripristina backup',
                   style: TextStyle(
                     color: accent,
                     fontWeight: FontWeight.w600,
@@ -3801,6 +3897,13 @@ class _ClientMainPageState extends State<ClientMainPage>
               if (!kIsWeb) _updateWidgetData();
             });
           },
+          onEditEntry: (sessionId, exercise, series) async {
+            if (updateHistoryEntrySeries(history, sessionId, exercise, series)) {
+              final prefs2 = await SharedPreferences.getInstance();
+              await prefs2.setString('client_history', jsonEncode(history));
+              _loadData();
+            }
+          },
         ),
         transitionsBuilder: (c, anim, _, child) => SlideTransition(
           position: Tween<Offset>(
@@ -4358,18 +4461,48 @@ Future<void> saveRoutineKeepingHistory(SharedPreferences prefs, String routineJs
   await prefs.setString('client_routine', routineJson);
 }
 
+/// Aggiorna in-place la voce di storico con stesso [sessionId] ed [exercise] sostituendo 'series'.
+bool updateHistoryEntrySeries(
+  List<dynamic> history,
+  String sessionId,
+  String exercise,
+  List<Map<String, dynamic>> series,
+) {
+  for (int i = history.length - 1; i >= 0; i--) {
+    final h = history[i];
+    if (h is Map &&
+        h['session_id']?.toString() == sessionId &&
+        h['exercise']?.toString() == exercise) {
+      final copy = [for (final s in series) Map<String, dynamic>.from(s)];
+      if (h is Map<String, dynamic>) {
+        h['series'] = copy;
+      } else {
+        history[i] = {...Map<String, dynamic>.from(h), 'series': copy};
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 class WorkoutEngine extends StatefulWidget {
   final WorkoutDay day;
   final List<dynamic> history;
   final Map<String, Map<String, dynamic>> carryoverWeights;
   final List<String> allSessionNames;
   final Function(Map<String, dynamic>) onDone;
+  final void Function(
+    String sessionId,
+    String exercise,
+    List<Map<String, dynamic>> series,
+  )? onEditEntry;
   final bool demoMode;
   const WorkoutEngine({
     super.key,
     required this.day,
     required this.history,
     required this.onDone,
+    this.onEditEntry,
     required this.allSessionNames,
     this.carryoverWeights = const {},
     this.demoMode = false,
@@ -4381,6 +4514,7 @@ class WorkoutEngine extends StatefulWidget {
 class _WorkoutEngineState extends State<WorkoutEngine>
     with WidgetsBindingObserver {
   int exI = 0;
+  int? _lastExecutedExI;
   int setN = 1;
   String _infoProssimo = ""; // Serve per far vedere cosa fare dopo nel timer
   String _prossimoNome =
@@ -4492,6 +4626,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     final prefs = await SharedPreferences.getInstance();
     final snapshot = {
       'exI': exI,
+      'lastExecutedExI': _lastExecutedExI,
       'order': [for (final e in widget.day.exercises) _origExercises.indexOf(e)],
       'setN': setN,
       'eserciziCompletati': eserciziCompletati,
@@ -4546,6 +4681,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
             ..addAll(order.map((i) => _origExercises[i]));
         }
         exI = savedExI.clamp(0, widget.day.exercises.length - 1);
+        _lastExecutedExI = (snap['lastExecutedExI'] as num?)?.toInt();
         setN = savedSetN;
         eserciziCompletati = savedCompleted;
         currentExSeries = savedCurrent;
@@ -6128,6 +6264,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     _demoReps = false; // prova guidata: alla serie dopo si rigirano le reps
 
     final currentEx = widget.day.exercises[exI];
+    _lastExecutedExI = exI;
 
     // Controlla record personale rispetto all'ultima sessione
     final suggest = _getSuggest(currentEx.name, setN);
@@ -6147,6 +6284,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     if (currentGroup > 0) {
       _supersetAccumulated.putIfAbsent(exI, () => []);
       _supersetAccumulated[exI]!.add(entry);
+      currentEx.results = List<Map<String, dynamic>>.from(_supersetAccumulated[exI]!);
 
       // Trova confini del gruppo
       int groupStart = exI;
@@ -6215,6 +6353,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
             _supersetAccumulated[i] ?? [],
           );
           if (s.isNotEmpty) {
+            widget.day.exercises[i].results = List<Map<String, dynamic>>.from(s);
             _allCompletedExercises.add({
               'exercise': widget.day.exercises[i].name,
               'series': s,
@@ -6290,6 +6429,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
 
     // ========== ESERCIZIO NORMALE ==========
     currentExSeries.add(entry);
+    currentEx.results = List<Map<String, dynamic>>.from(currentExSeries);
 
     if (setN < currentEx.targetSets) {
       setState(() {
@@ -6681,7 +6821,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                       children: [
                         Positioned.fill(
                           child: _DrumPickers(
-                            key: ValueKey('drum_$exI'),
+                            key: ValueKey('drum_${exI}_${setN}_${startKg}_$startReps'),
                             initialKg: startKg,
                             initialReps: startReps,
                             repsOnWeightUp: plan.target,
@@ -6860,6 +7000,226 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     });
   }
 
+  /// Serie già fatte per l'esercizio [targetExI], sia in corso che appena completato.
+  List<Map<String, dynamic>> _doneSeriesFor(int targetExI) {
+    if (targetExI < 0 || targetExI >= widget.day.exercises.length) return const [];
+    final ex = widget.day.exercises[targetExI];
+    if (targetExI == exI && currentExSeries.isNotEmpty) return currentExSeries;
+    final sup = _supersetAccumulated[targetExI];
+    if (sup != null && sup.isNotEmpty) return sup;
+    for (int i = _allCompletedExercises.length - 1; i >= 0; i--) {
+      if (_allCompletedExercises[i]['exercise'] == ex.name) {
+        return (_allCompletedExercises[i]['series'] as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      }
+    }
+    return ex.results;
+  }
+
+  /// Aggiorna peso/reps di una serie già eseguita ovunque sia salvata (memoria, snapshot, storico).
+  void _updateCompletedSet(int targetExI, int serieIdx, double newW, int newR) {
+    if (targetExI < 0 || targetExI >= widget.day.exercises.length) return;
+    final ex = widget.day.exercises[targetExI];
+    Map<String, dynamic> updatedEntry(Map<String, dynamic> old) => {
+      ...old,
+      's': old['s'] ?? (serieIdx + 1),
+      'w': newW,
+      'r': newR,
+    };
+
+    List<Map<String, dynamic>>? latestSeries;
+
+    if (targetExI == exI && serieIdx < currentExSeries.length) {
+      currentExSeries[serieIdx] = updatedEntry(currentExSeries[serieIdx]);
+      latestSeries = [for (final s in currentExSeries) Map<String, dynamic>.from(s)];
+    }
+    final sup = _supersetAccumulated[targetExI];
+    if (sup != null && serieIdx < sup.length) {
+      sup[serieIdx] = updatedEntry(sup[serieIdx]);
+      latestSeries ??= [for (final s in sup) Map<String, dynamic>.from(s)];
+    }
+    for (int i = _allCompletedExercises.length - 1; i >= 0; i--) {
+      if (_allCompletedExercises[i]['exercise'] == ex.name) {
+        final rawList = _allCompletedExercises[i]['series'] as List;
+        if (serieIdx < rawList.length) {
+          rawList[serieIdx] = updatedEntry(Map<String, dynamic>.from(rawList[serieIdx] as Map));
+          final copy = [for (final s in rawList) Map<String, dynamic>.from(s as Map)];
+          _allCompletedExercises[i]['series'] = copy;
+          latestSeries ??= copy;
+        }
+        break;
+      }
+    }
+    if (serieIdx < ex.results.length) {
+      ex.results[serieIdx] = updatedEntry(ex.results[serieIdx]);
+      latestSeries ??= [for (final s in ex.results) Map<String, dynamic>.from(s)];
+    } else if (latestSeries != null) {
+      ex.results = [for (final s in latestSeries) Map<String, dynamic>.from(s)];
+    }
+
+    final suggest = _getSuggest(ex.name, serieIdx + 1);
+    final lastW = (suggest['w'] as num?)?.toDouble() ?? 0.0;
+    final lastR = (suggest['r'] as num?)?.toInt() ?? 0;
+    setState(() {
+      _isNewRecord = (lastW > 0 || lastR > 0) && (newW > lastW || newR > lastR);
+    });
+    if (targetExI == exI && !eserciziCompletati.contains(ex.name)) {
+      _setDrumValues(exI, setN);
+    }
+
+    if (latestSeries != null &&
+        (eserciziCompletati.contains(ex.name) ||
+            _allCompletedExercises.any((e) => e['exercise'] == ex.name))) {
+      updateHistoryEntrySeries(widget.history, _sessionId, ex.name, latestSeries);
+      widget.onEditEntry?.call(_sessionId, ex.name, latestSeries);
+    }
+    _persistInProgress();
+    _aggiornaJsonSuDisco();
+  }
+
+  Future<void> _mostraDialogModificaSerie(int targetExI, int serieIdx) async {
+    final series = _doneSeriesFor(targetExI);
+    if (serieIdx < 0 || serieIdx >= series.length) return;
+    final ex = widget.day.exercises[targetExI];
+    final s = series[serieIdx];
+    double editKg = (s['w'] as num?)?.toDouble() ?? 0.0;
+    int editReps = ((s['r'] as num?)?.toInt() ?? 1).clamp(1, 50);
+    final accent = Theme.of(context).colorScheme.primary;
+    final dark = _isDarkCtx(context);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: dark ? const Color(0xFF1C1C1E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              ex.name.toUpperCase(),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: dark ? Colors.white54 : Colors.black54,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${AppL.setLabel} ${serieIdx + 1}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: dark ? Colors.white : Colors.black87,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 320,
+          height: 220,
+          child: _DrumPickers(
+            initialKg: editKg,
+            initialReps: editReps,
+            suggerisciAumento: false,
+            useQuarterStep: _usesQuarterStepForExercise(ex, editKg),
+            useEvenStep: _usesEvenStepForExercise(ex, editKg),
+            useSingleStep: _usesSingleStepForExercise(ex, editKg),
+            displayInPounds: _displayInPounds,
+            allowKeyboardInput: !_disableWeightKeyboard,
+            accent: accent,
+            onKgChanged: (v) => editKg = v,
+            onRepsChanged: (v) => editReps = v,
+            onWeightModeChanged: (q, e, s) => _setExerciseWeightMode(
+              ex,
+              useQuarterStep: q,
+              useEvenStep: e,
+              useSingleStep: s,
+            ),
+            onRepsInteraction: () {},
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              AppL.cancel.toUpperCase(),
+              style: TextStyle(color: dark ? Colors.white38 : Colors.black38),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accent,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(
+              AppL.save.toUpperCase(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (saved == true && mounted) {
+      _updateCompletedSet(targetExI, serieIdx, editKg, editReps);
+    }
+  }
+
+  /// Chip compatti toccabili "S1  60 kg x 10" per correggere peso e reps delle serie già fatte.
+  Widget _buildDoneSeriesChips(int targetExI, {bool showExName = false}) {
+    final series = _doneSeriesFor(targetExI);
+    if (series.isEmpty) return const SizedBox.shrink();
+    final ex = widget.day.exercises[targetExI];
+    final dark = _isDarkCtx(context);
+    final muted = dark ? Colors.white54 : Colors.black54;
+    final unit = _displayInPounds ? 'lb' : 'kg';
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (showExName) ...[
+          Text(
+            ex.name.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: muted,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+        ],
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 6,
+          runSpacing: 6,
+          children: List.generate(series.length, (i) {
+            final s = series[i];
+            final w = (s['w'] as num?)?.toDouble() ?? 0.0;
+            final r = (s['r'] as num?)?.toInt() ?? 0;
+            final wStr = formatWeightValue(w, usePounds: _displayInPounds);
+            return _pill(
+              context,
+              'S${i + 1}  $wStr $unit x $r',
+              icon: Icons.edit_rounded,
+              fontSize: 12,
+              onTap: () => _mostraDialogModificaSerie(targetExI, i),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
   /// Volta scorsa della serie [cur]: kg e reps in due pill. Niente «oggi»: l'obiettivo è già sulle ruote.
   Widget _lastSets(ExerciseConfig ex, int cur) {
     final l = _getSuggest(ex.name, cur);
@@ -6915,6 +7275,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     int targetR,
     bool suggerisciReps,
   ) {
+    final doneSeries = _doneSeriesFor(exI);
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
@@ -6928,8 +7289,13 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         mainAxisSize: MainAxisSize.min,
         children: [
           if (lastR > 0) _lastVsGoal(ex),
+          if (doneSeries.isNotEmpty) ...[
+            if (lastR > 0) const SizedBox(height: 8),
+            _buildDoneSeriesChips(exI),
+          ],
           if (ex.notePT.isNotEmpty) ...[
-            if (lastR > 0) Divider(color: _isDarkCtx(context) ? Colors.white10 : Colors.black12, height: 10),
+            if (lastR > 0 || doneSeries.isNotEmpty)
+              Divider(color: _isDarkCtx(context) ? Colors.white10 : Colors.black12, height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -7023,6 +7389,12 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     final progress = timerActive
         ? (_bgCounter / _maxTime).clamp(0.0, 1.0)
         : 0.0;
+    final int doneExI = (_lastExecutedExI != null &&
+            _lastExecutedExI! >= 0 &&
+            _lastExecutedExI! < widget.day.exercises.length)
+        ? _lastExecutedExI!
+        : exI;
+    final bool hasDoneSeries = _doneSeriesFor(doneExI).isNotEmpty;
 
     return Scaffold(
       backgroundColor: _isDarkCtx(context) ? Colors.black : Colors.white,
@@ -7081,194 +7453,211 @@ class _WorkoutEngineState extends State<WorkoutEngine>
             ),
 
             // ── METÀ INFERIORE: suggerimenti + skip ────────────────────
-            // scrollabile: con la pubblicità da 260px su schermo piccolo andava in overflow
             Expanded(
               child: LayoutBuilder(
                 builder: (ctx, box) => SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: box.maxHeight - 16),
-                  child: IntrinsicHeight(
-                  child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Navigazione esercizio durante riposo inter-esercizio - solo prima della prima serie
-                    if (widget.day.exercises.length > 1 && setN == 1)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: scala.max(0.0, box.maxHeight - 16),
+                    ),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.chevron_left_rounded,
-                              color: _isDarkCtx(context) ? Colors.white.withAlpha(80) : Colors.black54,
-                              size: 34,
-                            ),
-                            onPressed: () {
-                              final total = widget.day.exercises.length;
-                              int c = (exI - 1 + total) % total;
-                              for (int i = 0; i < total - 1; i++) {
-                                if (!eserciziCompletati.contains(widget.day.exercises[c].name)) break;
-                                c = (c - 1 + total) % total;
-                              }
-                              if (c != exI) _cambiaEsercizioMethod(c);
-                            },
-                          ),
-                          Text(
-                            AppL.changeExercise,
-                            style: TextStyle(
-                              color: _isDarkCtx(context) ? Colors.white.withAlpha(60) : Colors.black45,
-                              fontSize: 10,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.chevron_right_rounded,
-                              color: _isDarkCtx(context) ? Colors.white.withAlpha(80) : Colors.black54,
-                              size: 34,
-                            ),
-                            onPressed: () {
-                              final total = widget.day.exercises.length;
-                              int c = (exI + 1) % total;
-                              for (int i = 0; i < total - 1; i++) {
-                                if (!eserciziCompletati.contains(widget.day.exercises[c].name)) break;
-                                c = (c + 1) % total;
-                              }
-                              if (c != exI) _cambiaEsercizioMethod(c);
-                            },
-                          ),
-                        ],
-                      ),
-                    // Card prossimo esercizio
-                    GestureDetector(
-                      onTap: _prossimoNome.isNotEmpty
-                          ? () => showExerciseDetail(
-                              context,
-                              name: _prossimoNome,
-                              gifFilename: prossimoConfig?.gifFilename,
-                              ex: prossimoConfig,
-                            )
-                          : null,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-                        decoration: BoxDecoration(
-                          color: _isDarkCtx(context) ? Colors.white.withAlpha(8) : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _prossimoNome.isNotEmpty
-                                ? accent.withAlpha(60)
-                                : (_isDarkCtx(context) ? Colors.white10 : Colors.black12),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
+                          // Navigazione esercizio durante riposo inter-esercizio - solo prima della prima serie
+                          if (widget.day.exercises.length > 1 && setN == 1)
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  AppL.nextInfo,
-                                  style: TextStyle(
-                                    color: _isDarkCtx(context) ? Colors.white.withAlpha(70) : Colors.black54,
-                                    fontSize: 15,
-                                    letterSpacing: 4,
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  icon: Icon(
+                                    Icons.chevron_left_rounded,
+                                    color: _isDarkCtx(context) ? Colors.white.withAlpha(80) : Colors.black54,
+                                    size: 34,
                                   ),
+                                  onPressed: () {
+                                    final total = widget.day.exercises.length;
+                                    int c = (exI - 1 + total) % total;
+                                    for (int i = 0; i < total - 1; i++) {
+                                      if (!eserciziCompletati.contains(widget.day.exercises[c].name)) break;
+                                      c = (c - 1 + total) % total;
+                                    }
+                                    if (c != exI) _cambiaEsercizioMethod(c);
+                                  },
                                 ),
-                                if (_prossimoNome.isNotEmpty) ...[
-                                  const SizedBox(width: 6),
-                                  Icon(
-                                    Icons.play_circle_outline_rounded,
-                                    color: accent.withAlpha(150),
-                                    size: 16,
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            // GIF + info side by side
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                if (prossimoGifPath != null) ...[
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.asset(
-                                      prossimoGifPath,
-                                      height: 72,
-                                      width: 72,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                          const SizedBox.shrink(),
+                                Flexible(
+                                  child: Text(
+                                    AppL.changeExercise,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: _isDarkCtx(context) ? Colors.white.withAlpha(60) : Colors.black45,
+                                      fontSize: 10,
+                                      letterSpacing: 2,
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
-                                ],
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                ),
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  icon: Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: _isDarkCtx(context) ? Colors.white.withAlpha(80) : Colors.black54,
+                                    size: 34,
+                                  ),
+                                  onPressed: () {
+                                    final total = widget.day.exercises.length;
+                                    int c = (exI + 1) % total;
+                                    for (int i = 0; i < total - 1; i++) {
+                                      if (!eserciziCompletati.contains(widget.day.exercises[c].name)) break;
+                                      c = (c + 1) % total;
+                                    }
+                                    if (c != exI) _cambiaEsercizioMethod(c);
+                                  },
+                                ),
+                              ],
+                            ),
+                          if (hasDoneSeries)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: _buildDoneSeriesChips(
+                                doneExI,
+                                showExName: doneExI != exI,
+                              ),
+                            ),
+                          // Card prossimo esercizio
+                          GestureDetector(
+                            onTap: _prossimoNome.isNotEmpty
+                                ? () => showExerciseDetail(
+                                    context,
+                                    name: _prossimoNome,
+                                    gifFilename: prossimoConfig?.gifFilename,
+                                    ex: prossimoConfig,
+                                  )
+                                : null,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+                              decoration: BoxDecoration(
+                                color: _isDarkCtx(context) ? Colors.white.withAlpha(8) : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: _prossimoNome.isNotEmpty
+                                      ? accent.withAlpha(60)
+                                      : (_isDarkCtx(context) ? Colors.white10 : Colors.black12),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        _infoProssimo,
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 2,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: accent.withAlpha(210),
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
+                                      Flexible(
+                                        child: Text(
+                                          AppL.nextInfo,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: _isDarkCtx(context) ? Colors.white.withAlpha(70) : Colors.black54,
+                                            fontSize: 15,
+                                            letterSpacing: 4,
+                                          ),
                                         ),
                                       ),
-                                      // Le serie della volta scorsa di ciò che viene dopo (stesso esercizio o il prossimo).
-                                      if (prossimoConfig != null &&
-                                          (_previousResults[prossimoConfig.name]?.isNotEmpty ?? false)) ...[
-                                        const SizedBox(height: 8),
-                                        _lastSets(prossimoConfig, prossimoConfig.name == ex.name ? setN : 1),
+                                      if (_prossimoNome.isNotEmpty) ...[
+                                        const SizedBox(width: 6),
+                                        Icon(
+                                          Icons.play_circle_outline_rounded,
+                                          color: accent.withAlpha(150),
+                                          size: 16,
+                                        ),
                                       ],
                                     ],
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 6),
+                                  // GIF + info side by side
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      if (prossimoGifPath != null) ...[
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Image.asset(
+                                            prossimoGifPath,
+                                            height: 72,
+                                            width: 72,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                const SizedBox.shrink(),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                      ],
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              _infoProssimo,
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 2,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: accent.withAlpha(210),
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            // Le serie della volta scorsa di ciò che viene dopo (stesso esercizio o il prossimo).
+                                            if (prossimoConfig != null &&
+                                                (_previousResults[prossimoConfig.name]?.isNotEmpty ?? false)) ...[
+                                              const SizedBox(height: 8),
+                                              _lastSets(prossimoConfig, prossimoConfig.name == ex.name ? setN : 1),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // SKIP
-                    _TapHere(
-                      on: widget.demoMode,
-                      radius: 50,
-                      hint: AppL.demoGuideRest,
-                      child: GestureDetector(
-                      onTap: _skipRest,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 60,
-                          vertical: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: _isDarkCtx(context) ? Colors.white.withAlpha(40) : Colors.black26),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        child: Text(
-                          AppL.skip.toUpperCase(),
-                          style: TextStyle(
-                            letterSpacing: 3,
-                            fontWeight: FontWeight.w600,
-                            color: _isDarkCtx(context) ? Colors.white : Colors.black87,
-                            fontSize: 16,
                           ),
-                        ),
+
+                          // SKIP
+                          _TapHere(
+                            on: widget.demoMode,
+                            radius: 50,
+                            hint: AppL.demoGuideRest,
+                            child: GestureDetector(
+                              onTap: _skipRest,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 60,
+                                  vertical: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: _isDarkCtx(context) ? Colors.white.withAlpha(40) : Colors.black26,
+                                  ),
+                                  borderRadius: BorderRadius.circular(50),
+                                ),
+                                child: Text(
+                                  AppL.skip.toUpperCase(),
+                                  style: TextStyle(
+                                    letterSpacing: 3,
+                                    fontWeight: FontWeight.w600,
+                                    color: _isDarkCtx(context) ? Colors.white : Colors.black87,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    ),
-                  ],
                   ),
-                  ),
-                ),
                 ),
               ),
             ),
@@ -7774,6 +8163,9 @@ class _DrumPickersState extends State<_DrumPickers>
     _manualUseEvenStep = widget.useEvenStep;
     _manualUseSingleStep = widget.useSingleStep;
     _selKg = _kgToIndex(widget.initialKg);
+    if ((widget.initialKg - _displayValueToKg(_weightValues[_selKg])).abs() > 0.01) {
+      _customKgValue = widget.initialKg;
+    }
     _selReps = (widget.initialReps - 1).clamp(0, 49);
     _kgCtrl = FixedExtentScrollController(initialItem: _selKg);
     _repsCtrl = FixedExtentScrollController(initialItem: _selReps);
@@ -8993,6 +9385,17 @@ class PTChartPainter extends CustomPainter {
 }
 
 // --- SCHERMATA GESTIONE DATI ---
+String _formatHistoryDateLabel(String rawDate, {bool includeTime = false}) {
+  final d = DateTime.tryParse(rawDate);
+  if (d == null) return rawDate.isEmpty ? '—' : rawDate;
+  const monthsIt = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  final m = (AppL.lang == 'en' ? monthsEn : monthsIt)[d.month - 1];
+  final base = '${d.day} $m ${d.year}';
+  if (!includeTime || (d.hour == 0 && d.minute == 0)) return base;
+  return '$base · ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+}
+
 class CancellazioneScreen extends StatefulWidget {
   final List<dynamic> history;
   final List<WorkoutDay> routine;
@@ -9022,6 +9425,7 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
   Map<String, List<dynamic>> get _grouped {
     final Map<String, List<dynamic>> map = {};
     for (final h in _history) {
+      if (h is! Map) continue;
       final name = (h['exercise'] as String?) ?? '';
       if (name.isEmpty) continue;
       map.putIfAbsent(name, () => []).add(h);
@@ -9040,6 +9444,7 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
     }
 
     for (final h in _history) {
+      if (h is! Map) continue;
       final exName = (h['exercise'] as String?) ?? '';
       if (exName.isEmpty) continue;
       final dayName = (h['dayName'] as String?) ?? '';
@@ -9053,7 +9458,7 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
             break;
           }
         }
-        if (resolvedDay.isEmpty) resolvedDay = 'Altro';
+        if (resolvedDay.isEmpty) resolvedDay = AppL.lang == 'en' ? 'Other' : 'Altro';
       }
 
       byDay.putIfAbsent(resolvedDay, () => {});
@@ -9064,8 +9469,95 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
     return byDay.entries.where((e) => e.value.isNotEmpty).toList();
   }
 
+  int get _uniqueWorkoutsCount {
+    final sids = <String>{};
+    for (final h in _history) {
+      if (h is! Map) continue;
+      final sid = (h['session_id'] as String?)?.isNotEmpty == true
+          ? h['session_id'] as String
+          : ((h['date'] as String?) ?? '');
+      if (sid.isNotEmpty) {
+        sids.add(sid.length >= 10 && (h['session_id'] == null || '${h['session_id']}'.isEmpty)
+            ? sid.substring(0, 10)
+            : sid);
+      }
+    }
+    return sids.length;
+  }
+
+  int get _totalSetsCount {
+    int total = 0;
+    for (final h in _history) {
+      if (h is Map && h['series'] is List) {
+        total += (h['series'] as List).length;
+      }
+    }
+    return total;
+  }
+
+  String _sessionUnit(int n) =>
+      n == 1 ? (AppL.lang == 'it' ? 'sessione' : AppL.sessionCount) : AppL.sessionCountPlural;
+
+  String _exerciseUnit(int n) => n == 1
+      ? (AppL.lang == 'it' ? 'esercizio' : (AppL.lang == 'en' ? 'exercise' : AppL.exercises.toLowerCase()))
+      : AppL.exercises.toLowerCase();
+
+  String _exerciseSubtitle(List<dynamic> sessions) {
+    final countLabel = '${sessions.length} ${_sessionUnit(sessions.length)}';
+    Map? latest;
+    DateTime? latestDt;
+    for (final s in sessions) {
+      if (s is! Map) continue;
+      final dt = DateTime.tryParse((s['date'] as String?) ?? '');
+      if (latest == null || (dt != null && (latestDt == null || dt.isAfter(latestDt)))) {
+        latest = s;
+        latestDt = dt;
+      }
+    }
+    if (latest == null) return countLabel;
+    final dateStr = _formatHistoryDateLabel((latest['date'] as String?) ?? '');
+    final best = bestSet(latest['series'] as List?);
+    if (best == null) return '$countLabel · $dateStr';
+    final bestStr = best.w > 0
+        ? '${formatWeightValue(best.w)} kg × ${best.r}'
+        : '${best.r} reps';
+    return '$countLabel · $dateStr · $bestStr';
+  }
+
   Future<void> _eliminaSelezionati() async {
     if (_selected.isEmpty) return;
+    final dark = _isDarkCtx(context);
+    final en = AppL.lang == 'en';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: dark ? const Color(0xFF1C1C1E) : Colors.white,
+        title: Text(
+          '${AppL.deleteSelected} (${_selected.length})?',
+          style: TextStyle(color: dark ? Colors.white : Colors.black87),
+        ),
+        content: Text(
+          en
+              ? 'All recorded sessions for the selected exercises will be deleted.'
+              : 'Verranno eliminate tutte le sessioni registrate per gli esercizi selezionati.',
+          style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppL.cancel.toUpperCase()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              AppL.delete,
+              style: const TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
     final toDelete = Set<String>.from(_selected);
     final filtered = _history
         .where((h) => !toDelete.contains(h['exercise']))
@@ -9077,8 +9569,8 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
       _selected.clear();
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Dati eliminati'),
+      SnackBar(
+        content: Text(AppL.dataDeleted),
         backgroundColor: Colors.redAccent,
       ),
     );
@@ -9172,46 +9664,128 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final days = _groupedByDay;
-    // Raccogliamo tutti gli esercizi per la selezione multipla
-    final grouped = _grouped;
-
-    return Scaffold(
-      backgroundColor: _isDarkCtx(context) ? const Color(0xFF111111) : Colors.grey.shade100,
-      appBar: AppBar(
-        backgroundColor: _isDarkCtx(context) ? const Color(0xFF111111) : Colors.grey.shade100,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: _isDarkCtx(context) ? Colors.white70 : Colors.black87),
-          onPressed: () => Navigator.pop(context),
+  Widget _summaryPill(IconData icon, String value, String label, bool dark) {
+    final fg = dark ? Colors.white : Colors.black87;
+    final muted = dark ? Colors.white54 : Colors.black54;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: dark ? Colors.white10 : Colors.black12),
         ),
-        title: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.storage_rounded, color: Colors.redAccent, size: 20),
-            SizedBox(width: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 14, color: appAccentNotifier.value),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: fg, fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
             Text(
-              'Gestione Dati',
-              style: TextStyle(
-                color: _isDarkCtx(context) ? Colors.white : Colors.black87,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: muted, fontSize: 11),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final days = _groupedByDay;
+    final grouped = _grouped;
+    final dark = _isDarkCtx(context);
+    final fg = dark ? Colors.white : Colors.black87;
+    final muted = dark ? Colors.white54 : Colors.black54;
+    final accent = appAccentNotifier.value;
+
+    return Scaffold(
+      backgroundColor: dark ? const Color(0xFF111111) : Colors.grey.shade100,
+      appBar: AppBar(
+        backgroundColor: dark ? const Color(0xFF111111) : Colors.grey.shade100,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new, color: dark ? Colors.white70 : Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.storage_rounded, color: Colors.redAccent, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                AppL.dataManagement,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          if (grouped.isNotEmpty)
+            TextButton(
+              onPressed: () => setState(() {
+                if (_selected.length == grouped.length) {
+                  _selected.clear();
+                } else {
+                  _selected
+                    ..clear()
+                    ..addAll(grouped.keys);
+                }
+              }),
+              child: Text(
+                _selected.length == grouped.length
+                    ? AppL.cancel
+                    : AppL.all,
+                style: TextStyle(color: accent, fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+            ),
+        ],
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (days.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+              child: Row(
+                children: [
+                  _summaryPill(Icons.calendar_today_rounded, '$_uniqueWorkoutsCount', AppL.sessions, dark),
+                  const SizedBox(width: 8),
+                  _summaryPill(Icons.fitness_center_rounded, '${grouped.length}', AppL.exercises, dark),
+                  const SizedBox(width: 8),
+                  _summaryPill(Icons.repeat_rounded, '$_totalSetsCount', AppL.sets, dark),
+                ],
+              ),
+            ),
           Expanded(
             child: days.isEmpty
                 ? Center(
                     child: Text(
-                      'Nessuno storico presente',
+                      AppL.noHistory,
                       style: TextStyle(
-                        color: _isDarkCtx(context) ? Colors.white : Colors.black87.withAlpha(80),
+                        color: dark ? Colors.white54 : Colors.black54,
                         fontSize: 15,
                       ),
                     ),
@@ -9226,34 +9800,69 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
                       final dayName = days[dayIdx].key;
                       final exercises = days[dayIdx].value;
                       final exNames = exercises.keys.toList();
+                      final daySids = <String>{};
+                      for (final list in exercises.values) {
+                        for (final h in list) {
+                          if (h is Map) {
+                            final sid = (h['session_id'] as String?)?.isNotEmpty == true
+                                ? h['session_id'] as String
+                                : ((h['date'] as String?) ?? '');
+                            if (sid.isNotEmpty) daySids.add(sid);
+                          }
+                        }
+                      }
+                      final allDaySelected = exNames.every(_selected.contains);
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header giorno
+                          // Header giorno con conteggio esercizi e sessioni
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 3,
-                                  height: 16,
-                                  margin: const EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.redAccent,
-                                    borderRadius: BorderRadius.circular(2),
+                            padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(6),
+                              onTap: () => setState(() {
+                                if (allDaySelected) {
+                                  _selected.removeAll(exNames);
+                                } else {
+                                  _selected.addAll(exNames);
+                                }
+                              }),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 3,
+                                    height: 16,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: accent,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  dayName.toUpperCase(),
-                                  style: TextStyle(
-                                    color: _isDarkCtx(context) ? Colors.white : Colors.black87.withAlpha(180),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 2,
+                                  Expanded(
+                                    child: Text(
+                                      dayName.toUpperCase(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: fg.withAlpha(200),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${exNames.length} ${_exerciseUnit(exNames.length)} · ${daySids.length} ${_sessionUnit(daySids.length)}',
+                                    style: TextStyle(
+                                      color: muted,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           // Esercizi del giorno
@@ -9262,23 +9871,27 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
                             final isSelected = _selected.contains(exName);
                             return GestureDetector(
                               onLongPress: () => setState(() {
-                                _selected.clear();
-                                _selected.add(exName);
+                                if (isSelected) {
+                                  _selected.remove(exName);
+                                } else {
+                                  _selected.add(exName);
+                                }
                               }),
                               child: Container(
                                 margin: const EdgeInsets.symmetric(vertical: 3),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? Colors.redAccent.withAlpha(30)
-                                      : Colors.white.withAlpha(8),
-                                  borderRadius: BorderRadius.circular(10),
+                                      ? Colors.redAccent.withAlpha(dark ? 30 : 22)
+                                      : (dark ? const Color(0xFF1C1C1E) : Colors.white),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: isSelected
-                                        ? Colors.redAccent.withAlpha(120)
-                                        : Colors.white10,
+                                        ? Colors.redAccent.withAlpha(140)
+                                        : (dark ? Colors.white10 : Colors.black12),
                                   ),
                                 ),
                                 child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   onTap: () => _apriDettaglio(
                                     exName,
                                     grouped[exName] ?? sessions,
@@ -9296,21 +9909,26 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
                                   ),
                                   title: Text(
                                     exName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      color: _isDarkCtx(context) ? Colors.white : Colors.black87,
+                                      color: fg,
                                       fontSize: 14,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   subtitle: Text(
-                                    '${sessions.length} session${sessions.length == 1 ? 'e' : 'i'}',
+                                    _exerciseSubtitle(sessions),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      color: _isDarkCtx(context) ? Colors.white : Colors.black87.withAlpha(100),
+                                      color: muted,
                                       fontSize: 12,
                                     ),
                                   ),
                                   trailing: Icon(
                                     Icons.chevron_right_rounded,
-                                    color: _isDarkCtx(context) ? Colors.white24 : Colors.black26,
+                                    color: dark ? Colors.white24 : Colors.black26,
                                   ),
                                 ),
                               ),
@@ -9321,22 +9939,24 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
                     },
                   ),
           ),
+          Divider(color: dark ? Colors.white12 : Colors.black12, height: 1),
           if (_selected.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.delete_sweep_outlined,
-                    color: _isDarkCtx(context) ? Colors.white : Colors.black87,
+                    color: Colors.white,
                   ),
                   label: Text(
-                    'Elimina selezionati (${_selected.length})',
-                    style: TextStyle(color: _isDarkCtx(context) ? Colors.white : Colors.black87),
+                    '${AppL.deleteSelected} (${_selected.length})',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -9346,15 +9966,15 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
                 ),
               ),
             ),
-          Divider(color: _isDarkCtx(context) ? Colors.white12 : Colors.black12, height: 1),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
             child: Text(
-              'RESET TOTALE',
+              AppL.totalReset.toUpperCase(),
               style: TextStyle(
-                color: _isDarkCtx(context) ? Colors.white : Colors.black87.withAlpha(100),
+                color: Colors.redAccent.withAlpha(200),
                 fontSize: 11,
-                letterSpacing: 2,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
               ),
             ),
           ),
@@ -9367,9 +9987,9 @@ class _CancellazioneScreenState extends State<CancellazioneScreen> {
                   Icons.delete_forever_outlined,
                   color: Colors.redAccent,
                 ),
-                label: const Text(
-                  'Reset completo dati',
-                  style: TextStyle(color: Colors.redAccent),
+                label: Text(
+                  AppL.fullReset,
+                  style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w700),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Colors.redAccent),
@@ -9412,8 +10032,12 @@ class _DettaglioEsercizioScreenState extends State<_DettaglioEsercizioScreen> {
   void initState() {
     super.initState();
     _sessions = List<dynamic>.from(
-      widget.sessions.map((s) => Map<String, dynamic>.from(s)),
-    );
+      widget.sessions.map((s) => Map<String, dynamic>.from(s as Map)),
+    )..sort((a, b) {
+        final da = DateTime.tryParse('${(a as Map)['date'] ?? ''}') ?? DateTime(1970);
+        final db = DateTime.tryParse('${(b as Map)['date'] ?? ''}') ?? DateTime(1970);
+        return db.compareTo(da);
+      });
   }
 
   Future<void> _save() => widget.onSave(_sessions);
@@ -9501,41 +10125,72 @@ class _DettaglioEsercizioScreenState extends State<_DettaglioEsercizioScreen> {
     final rCtrl = TextEditingController(
       text: '${serie['r'] ?? serie['reps'] ?? ''}',
     );
+    final dark = _isDarkCtx(context);
+    final accent = appAccentNotifier.value;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: _isDarkCtx(context) ? const Color(0xFF1C1C1E) : Colors.white,
+        backgroundColor: dark ? const Color(0xFF1C1C1E) : Colors.white,
         title: Text(
-          'Serie ${serieIdx + 1}',
-          style: TextStyle(color: _isDarkCtx(context) ? Colors.white : Colors.black87),
+          '${AppL.setLabel} ${serieIdx + 1}',
+          style: TextStyle(color: dark ? Colors.white : Colors.black87),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              AppL.weight,
+              style: TextStyle(
+                color: dark ? Colors.white54 : Colors.black54,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
             TextField(
               controller: wCtrl,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              style: TextStyle(color: _isDarkCtx(context) ? Colors.white : Colors.black87),
+              style: TextStyle(color: dark ? Colors.white : Colors.black87),
               decoration: InputDecoration(
-                labelText: 'Peso (kg)',
-                labelStyle: TextStyle(color: _isDarkCtx(context) ? Colors.white54 : Colors.black54),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: _isDarkCtx(context) ? Colors.white24 : Colors.black26),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: dark ? Colors.white24 : Colors.black26),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: accent),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            Text(
+              AppL.reps,
+              style: TextStyle(
+                color: dark ? Colors.white54 : Colors.black54,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
             TextField(
               controller: rCtrl,
               keyboardType: TextInputType.number,
-              style: TextStyle(color: _isDarkCtx(context) ? Colors.white : Colors.black87),
+              style: TextStyle(color: dark ? Colors.white : Colors.black87),
               decoration: InputDecoration(
-                labelText: 'Reps',
-                labelStyle: TextStyle(color: _isDarkCtx(context) ? Colors.white54 : Colors.black54),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: _isDarkCtx(context) ? Colors.white24 : Colors.black26),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: dark ? Colors.white24 : Colors.black26),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: accent),
                 ),
               ),
             ),
@@ -9555,7 +10210,11 @@ class _DettaglioEsercizioScreenState extends State<_DettaglioEsercizioScreen> {
                 final series = List<dynamic>.from(
                   _sessions[sIdx]['series'] ?? [],
                 );
-                series[serieIdx] = {'w': newW, 'r': newR};
+                series[serieIdx] = {
+                  ...(serie is Map<String, dynamic> ? serie : Map<String, dynamic>.from(serie)),
+                  'w': newW,
+                  'r': newR,
+                };
                 _sessions[sIdx] = Map<String, dynamic>.from(_sessions[sIdx])
                   ..['series'] = series;
               });
@@ -9563,8 +10222,8 @@ class _DettaglioEsercizioScreenState extends State<_DettaglioEsercizioScreen> {
               if (mounted) Navigator.pop(context);
             },
             child: Text(
-              AppL.save,
-              style: TextStyle(color: Color(0xFF00F2FF)),
+              AppL.save.toUpperCase(),
+              style: TextStyle(color: accent, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -9574,19 +10233,26 @@ class _DettaglioEsercizioScreenState extends State<_DettaglioEsercizioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final dark = _isDarkCtx(context);
+    final fg = dark ? Colors.white : Colors.black87;
+    final muted = dark ? Colors.white54 : Colors.black54;
+    final accent = appAccentNotifier.value;
+
     return Scaffold(
-      backgroundColor: _isDarkCtx(context) ? const Color(0xFF111111) : Colors.grey.shade100,
+      backgroundColor: dark ? const Color(0xFF111111) : Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: _isDarkCtx(context) ? const Color(0xFF111111) : Colors.grey.shade100,
+        backgroundColor: dark ? const Color(0xFF111111) : Colors.grey.shade100,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: _isDarkCtx(context) ? Colors.white70 : Colors.black87),
+          icon: Icon(Icons.arrow_back_ios_new, color: dark ? Colors.white70 : Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.exerciseName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: _isDarkCtx(context) ? Colors.white : Colors.black87,
+            color: fg,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -9595,9 +10261,9 @@ class _DettaglioEsercizioScreenState extends State<_DettaglioEsercizioScreen> {
       body: _sessions.isEmpty
           ? Center(
               child: Text(
-                'Nessuna sessione',
+                AppL.noSession,
                 style: TextStyle(
-                  color: _isDarkCtx(context) ? Colors.white : Colors.black87.withAlpha(80),
+                  color: muted,
                   fontSize: 15,
                 ),
               ),
@@ -9607,31 +10273,54 @@ class _DettaglioEsercizioScreenState extends State<_DettaglioEsercizioScreen> {
               itemCount: _sessions.length,
               itemBuilder: (_, sIdx) {
                 final session = _sessions[sIdx];
-                final date = session['date'] as String? ?? '';
+                final rawDate = session['date'] as String? ?? '';
+                final dayName = (session['dayName'] as String?) ?? '';
                 final series = (session['series'] as List?) ?? [];
+                final dateLabel = _formatHistoryDateLabel(rawDate, includeTime: true);
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: _isDarkCtx(context) ? Colors.white.withAlpha(8) : Colors.black87.withAlpha(8),
+                    color: dark ? const Color(0xFF1C1C1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _isDarkCtx(context) ? Colors.white10 : Colors.black12),
+                    border: Border.all(color: dark ? Colors.white10 : Colors.black12),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header sessione
+                      // Header sessione con data leggibile, giorno e conteggio serie
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                        padding: const EdgeInsets.fromLTRB(14, 10, 8, 8),
                         child: Row(
                           children: [
+                            Icon(Icons.event_note_rounded, size: 16, color: accent),
+                            const SizedBox(width: 8),
                             Expanded(
-                              child: Text(
-                                date,
-                                style: TextStyle(
-                                  color: _isDarkCtx(context) ? Colors.white54 : Colors.black54,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    dateLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: fg,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    [
+                                      if (dayName.isNotEmpty) dayName,
+                                      '${series.length} ${AppL.sets.toLowerCase()}',
+                                    ].join(' · '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: muted,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             IconButton(
@@ -9646,21 +10335,41 @@ class _DettaglioEsercizioScreenState extends State<_DettaglioEsercizioScreen> {
                           ],
                         ),
                       ),
-                      Divider(color: _isDarkCtx(context) ? Colors.white10 : Colors.black12, height: 1),
+                      Divider(color: dark ? Colors.white10 : Colors.black12, height: 1),
                       // Serie
                       ...series.asMap().entries.map((e) {
                         final idx = e.key;
                         final s = e.value as Map;
-                        final w = s['w'] ?? s['weight'] ?? 0;
-                        final r = s['r'] ?? s['reps'] ?? 0;
+                        final w = ((s['w'] ?? s['weight'] ?? 0) as num).toDouble();
+                        final r = ((s['r'] ?? s['reps'] ?? 0) as num).toInt();
                         return ListTile(
                           dense: true,
-                          title: Text(
-                            'Serie ${idx + 1}:  ${w}kg × ${r} reps',
-                            style: TextStyle(
-                              color: _isDarkCtx(context) ? Colors.white70 : Colors.black87,
-                              fontSize: 13,
-                            ),
+                          title: Row(
+                            children: [
+                              SizedBox(
+                                width: 32,
+                                child: Text(
+                                  'S${idx + 1}',
+                                  style: TextStyle(
+                                    color: accent,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  '${formatWeightValue(w)} kg × $r reps',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: dark ? Colors.white70 : Colors.black87,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -9668,7 +10377,7 @@ class _DettaglioEsercizioScreenState extends State<_DettaglioEsercizioScreen> {
                               IconButton(
                                 icon: Icon(
                                   Icons.edit_rounded,
-                                  color: _isDarkCtx(context) ? Colors.white38 : Colors.black38,
+                                  color: dark ? Colors.white38 : Colors.black38,
                                   size: 18,
                                 ),
                                 onPressed: () => _modificaSerie(sIdx, idx),

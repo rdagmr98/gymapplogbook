@@ -332,4 +332,181 @@ void main() {
     expect(tester.takeException(), isNull);
     await _captureStoryPng(tester, 'build/share_previews/progress_share_card.png');
   });
+
+  test('updateHistoryEntrySeries aggiorna la voce con stesso session_id ed exercise', () {
+    final history = <dynamic>[
+      {
+        'exercise': 'Panca Piana',
+        'series': [
+          {'s': 1, 'w': 60.0, 'r': 10},
+          {'s': 2, 'w': 60.0, 'r': 8},
+        ],
+        'date': '2026-11-10T18:00:00',
+        'dayName': 'Push',
+        'session_id': 'sid_1',
+      },
+      {
+        'exercise': 'Panca Piana',
+        'series': [
+          {'s': 1, 'w': 62.5, 'r': 10},
+          {'s': 2, 'w': 62.5, 'r': 9},
+        ],
+        'date': '2026-11-20T18:00:00',
+        'dayName': 'Push',
+        'session_id': 'sid_2',
+      },
+      {
+        'exercise': 'Croci Cavi',
+        'series': [
+          {'s': 1, 'w': 15.0, 'r': 12},
+        ],
+        'date': '2026-11-20T18:15:00',
+        'dayName': 'Push',
+        'session_id': 'sid_2',
+      },
+    ];
+
+    final updated = [
+      {'s': 1, 'w': 65.0, 'r': 10},
+      {'s': 2, 'w': 65.0, 'r': 8},
+    ];
+    final ok = updateHistoryEntrySeries(history, 'sid_2', 'Panca Piana', updated);
+    expect(ok, isTrue);
+    expect((history[1]['series'] as List)[0]['w'], 65.0);
+    expect((history[1]['series'] as List)[1]['r'], 8);
+    // Non tocca la sessione precedente né gli altri esercizi della stessa sessione
+    expect((history[0]['series'] as List)[0]['w'], 60.0);
+    expect((history[2]['series'] as List)[0]['w'], 15.0);
+
+    // Non trova una voce inesistente
+    expect(updateHistoryEntrySeries(history, 'sid_999', 'Panca Piana', updated), isFalse);
+  });
+
+  testWidgets('CancellazioneScreen (Gestione Dati) renders PNG cleanly in dark theme',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final cardKey = GlobalKey();
+    final fakeRoutine = [
+      WorkoutDay(
+        dayName: 'Push · Petto & Spalle',
+        bodyParts: const ['petto', 'spalle'],
+        exercises: [
+          ExerciseConfig(name: 'Panca piana bilanciere', targetSets: 3, repsList: [8, 8, 8], recoveryTime: 90),
+          ExerciseConfig(name: 'Spinte manubri su panca inclinata', targetSets: 3, repsList: [10, 10, 10], recoveryTime: 90),
+          ExerciseConfig(name: 'Alzate laterali manubri', targetSets: 3, repsList: [14, 14, 14], recoveryTime: 60),
+        ],
+      ),
+      WorkoutDay(
+        dayName: 'Pull · Dorso & Bicipiti',
+        bodyParts: const ['dorso', 'braccia'],
+        exercises: [
+          ExerciseConfig(name: 'Lat machine avanti', targetSets: 3, repsList: [10, 10, 10], recoveryTime: 90),
+          ExerciseConfig(name: 'Rematore bilanciere', targetSets: 3, repsList: [8, 8, 8], recoveryTime: 90),
+        ],
+      ),
+      WorkoutDay(
+        dayName: 'Legs · Gambe',
+        bodyParts: const ['gambe'],
+        exercises: [
+          ExerciseConfig(name: 'Squat bilanciere', targetSets: 4, repsList: [6, 6, 8, 8], recoveryTime: 120),
+        ],
+      ),
+    ];
+    final fakeHistory = <dynamic>[
+      {
+        'exercise': 'Panca piana bilanciere',
+        'dayName': 'Push · Petto & Spalle',
+        'date': '2026-11-10T18:10:00',
+        'session_id': 's1',
+        'series': [
+          {'s': 1, 'w': 80.0, 'r': 8},
+          {'s': 2, 'w': 82.5, 'r': 7},
+          {'s': 3, 'w': 80.0, 'r': 7},
+        ],
+      },
+      {
+        'exercise': 'Panca piana bilanciere',
+        'dayName': 'Push · Petto & Spalle',
+        'date': '2026-11-17T18:25:00',
+        'session_id': 's4',
+        'series': [
+          {'s': 1, 'w': 82.5, 'r': 8},
+          {'s': 2, 'w': 85.0, 'r': 7},
+          {'s': 3, 'w': 80.0, 'r': 8},
+        ],
+      },
+      {
+        'exercise': 'Spinte manubri su panca inclinata',
+        'dayName': 'Push · Petto & Spalle',
+        'date': '2026-11-17T18:40:00',
+        'session_id': 's4',
+        'series': [
+          {'s': 1, 'w': 32.0, 'r': 10},
+          {'s': 2, 'w': 32.0, 'r': 9},
+        ],
+      },
+      {
+        'exercise': 'Alzate laterali manubri',
+        'dayName': 'Push · Petto & Spalle',
+        'date': '2026-11-17T18:55:00',
+        'session_id': 's4',
+        'series': [
+          {'s': 1, 'w': 14.0, 'r': 14},
+          {'s': 2, 'w': 14.0, 'r': 13},
+        ],
+      },
+      {
+        'exercise': 'Lat machine avanti',
+        'dayName': 'Pull · Dorso & Bicipiti',
+        'date': '2026-11-14T19:00:00',
+        'session_id': 's2',
+        'series': [
+          {'s': 1, 'w': 65.0, 'r': 10},
+          {'s': 2, 'w': 65.0, 'r': 9},
+          {'s': 3, 'w': 60.0, 'r': 10},
+        ],
+      },
+      {
+        'exercise': 'Rematore bilanciere',
+        'dayName': 'Pull · Dorso & Bicipiti',
+        'date': '2026-11-14T19:15:00',
+        'session_id': 's2',
+        'series': [
+          {'s': 1, 'w': 70.0, 'r': 8},
+          {'s': 2, 'w': 70.0, 'r': 8},
+        ],
+      },
+      {
+        'exercise': 'Squat bilanciere',
+        'dayName': 'Legs · Gambe',
+        'date': '2026-11-15T17:30:00',
+        'session_id': 's3',
+        'series': [
+          {'s': 1, 'w': 110.0, 'r': 6},
+          {'s': 2, 'w': 115.0, 'r': 6},
+          {'s': 3, 'w': 105.0, 'r': 8},
+        ],
+      },
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData.dark(),
+        home: RepaintBoundary(
+          key: cardKey,
+          child: CancellazioneScreen(
+            history: fakeHistory,
+            routine: fakeRoutine,
+            onSave: (_) async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await _captureStoryPng(tester, 'build/share_previews/gestione_dati.png');
+  });
 }

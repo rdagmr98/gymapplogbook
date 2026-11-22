@@ -46,6 +46,14 @@ Future<void> _loadTestFonts() async {
   }
 }
 
+Finder _card() => find.byWidgetPredicate((w) => w is RepaintBoundary && w.key is GlobalKey).last;
+
+// la riga da [left] a [right] deve stare al centro della card
+void _expectCentered(WidgetTester tester, Finder left, Finder right) {
+  final mid = (tester.getRect(left).left + tester.getRect(right).right) / 2;
+  expect(mid, closeTo(tester.getCenter(_card()).dx, 1.5));
+}
+
 Future<void> _captureStoryPng(
   WidgetTester tester,
   String outPath,
@@ -189,11 +197,12 @@ void main() {
     expect(find.text('+4.8%'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    // tutti gli elementi accesi: la card deve restare bassa
-    await tester.tap(find.text(AppL.microcycleBadges));
-    await tester.pumpAndSettle();
+    // i badge sono già accesi: tutti gli elementi, card bassa e centrata
     expect(find.text('3/4'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    expect(find.text('Upper'), findsOneWidget);
+    expect(tester.getSize(_card()).height, lessThanOrEqualTo(260));
+    _expectCentered(tester, find.text('French press bilanciere EZ'), find.text('35 kg × 10'));
+    _expectCentered(tester, find.text('Push'), find.text('Upper'));
     await _captureStoryPng(tester, 'build/share_previews/workout_share_card_all.png');
   });
 
@@ -262,6 +271,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    await _captureStoryPng(tester, 'build/share_previews/workout_share_card_extreme.png');
   });
 
   testWidgets('Streak share card renders PNG cleanly',
@@ -282,7 +292,51 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    expect(find.text(AppL.getItOnPlay), findsOneWidget);
+    expect(tester.getSize(_card()).height, lessThanOrEqualTo(170));
     await _captureStoryPng(tester, 'build/share_previews/streak_share_card.png');
+  });
+
+  testWidgets('10 giorni e streak a 3 cifre a 320 dp, in tutte le lingue', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    addTearDown(() => AppL.setLang('it'));
+    final days = [for (int i = 1; i <= 10; i++) 'Giorno $i Petto Pesante'];
+    final done = days.take(4).toSet();
+    for (final lang in ['en', 'es', 'pt', 'fr', 'de', 'el', 'ar', 'pl', 'ro', 'hu', 'it']) {
+      AppL.setLang(lang);
+      await tester.pumpWidget(_wrapSheet(
+        brightness: Brightness.dark,
+        testStreakShareSheet(
+          streak: 128,
+          allSessionNames: days,
+          streakDoneNames: done,
+          accent: const Color(0xFFFFD740),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: lang);
+    }
+    await _captureStoryPng(tester, 'build/share_previews/streak_share_card_extreme.png');
+    await tester.tap(find.text(AppL.badgesIcon));
+    await tester.pumpAndSettle();
+    _expectCentered(tester, find.byIcon(Icons.local_fire_department_rounded), find.text('128'));
+
+    await tester.pumpWidget(_wrapSheet(
+      testWorkoutShareSheet(
+        dayName: days.first,
+        todayLabel: '16 novembre 2026',
+        exercises: const [],
+        streak: 128,
+        allSessionNames: days,
+        streakDoneNames: done,
+        accent: const Color(0xFF00F2FF),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.descendant(of: _card(), matching: find.byType(Divider)), findsOneWidget);
+    await _captureStoryPng(tester, 'build/share_previews/workout_share_card_10days.png');
   });
 
   testWidgets('Progress share card renders PNG cleanly',
@@ -337,6 +391,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    expect(tester.getSize(_card()).height, lessThanOrEqualTo(270));
+    _expectCentered(tester, find.text('Squat bilanciere'), find.text('+12%'));
     await _captureStoryPng(tester, 'build/share_previews/progress_share_card.png');
   });
 

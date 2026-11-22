@@ -2058,65 +2058,81 @@ class _ClientMainPageState extends State<ClientMainPage>
     final accent = appAccentNotifier.value;
     final fg = dark ? Colors.white : Colors.black87;
     final subClr = fg.withAlpha(140);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-      child: Row(children: [
-        Icon(icon, color: accent, size: 20),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+    // Con il sottotitolo il selettore va su una riga sua a tutta larghezza, altrimenti il testo va a capo.
+    final stacked = sub != null;
+    final segments = Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: dark ? Colors.black26 : Colors.black.withAlpha(12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: stacked ? MainAxisSize.max : MainAxisSize.min,
+        children: options.entries.map((entry) {
+          final selected = selectedKey == entry.key;
+          final seg = GestureDetector(
+            onTap: () => onChanged(entry.key),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              alignment: stacked ? Alignment.center : null,
+              decoration: BoxDecoration(
+                color: selected ? accent : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                entry.value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? Colors.black : (dark ? Colors.white70 : Colors.black54),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          );
+          return stacked ? Expanded(child: seg) : seg;
+        }).toList(),
+      ),
+    );
+    final head = Row(children: [
+      Icon(icon, color: accent, size: 20),
+      const SizedBox(width: 14),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              maxLines: stacked ? 1 : 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: fg, fontSize: 14),
+            ),
+            if (sub != null)
               Text(
-                label,
+                sub,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: fg, fontSize: 14),
+                style: TextStyle(color: subClr, fontSize: 12),
               ),
-              if (sub != null)
-                Text(
-                  sub,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: subClr, fontSize: 12),
-                ),
-            ],
-          ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            color: dark ? Colors.black26 : Colors.black.withAlpha(12),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: options.entries.map((entry) {
-              final selected = selectedKey == entry.key;
-              return GestureDetector(
-                onTap: () => onChanged(entry.key),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: selected ? accent : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    entry.value,
-                    style: TextStyle(
-                      color: selected ? Colors.black : (dark ? Colors.white70 : Colors.black54),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ]),
+      ),
+      if (!stacked) ...[const SizedBox(width: 8), segments],
+    ]);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+      child: stacked
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                head,
+                const SizedBox(height: 8),
+                Padding(padding: const EdgeInsets.only(left: 34), child: segments),
+              ],
+            )
+          : head,
     );
   }
 
@@ -7088,7 +7104,9 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     final accent = Theme.of(context).colorScheme.primary;
     final dark = _isDarkCtx(context);
 
-    final saved = await showDialog<bool>(
+    final canPick = _eserciziConSerieFatte().fold<int>(0, (n, i) => n + _doneSeriesFor(i).length) > 1;
+
+    final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: dark ? const Color(0xFF1C1C1E) : Colors.white,
@@ -7119,6 +7137,17 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                 fontWeight: FontWeight.w800,
               ),
             ),
+            if (canPick)
+              TextButton.icon(
+                onPressed: () => Navigator.pop(ctx, 'pick'),
+                icon: Icon(Icons.list_rounded, size: 18, color: accent),
+                label: Text(
+                  AppL.lang == 'en' ? 'Pick another set' : "Scegli un'altra serie",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: accent, fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+              ),
           ],
         ),
         content: SizedBox(
@@ -7147,14 +7176,14 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx),
             child: Text(
               AppL.cancel.toUpperCase(),
               style: TextStyle(color: dark ? Colors.white38 : Colors.black38),
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(ctx, 'save'),
             style: ElevatedButton.styleFrom(
               backgroundColor: accent,
               foregroundColor: Colors.black,
@@ -7168,55 +7197,107 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         ],
       ),
     );
-    if (saved == true && mounted) {
+    if (!mounted) return;
+    if (result == 'save') {
       _updateCompletedSet(targetExI, serieIdx, editKg, editReps);
+    } else if (result == 'pick') {
+      final scelta = await _scegliSerieFatta(targetExI, serieIdx);
+      if (scelta != null && mounted) _mostraDialogModificaSerie(scelta.$1, scelta.$2);
     }
   }
 
-  /// Chip compatti toccabili "S1  60 kg x 10" per correggere peso e reps delle serie già fatte.
-  Widget _buildDoneSeriesChips(int targetExI, {bool showExName = false}) {
-    final series = _doneSeriesFor(targetExI);
-    if (series.isEmpty) return const SizedBox.shrink();
-    final ex = widget.day.exercises[targetExI];
+  /// Esercizi con almeno una serie fatta, nell'ordine in cui sono stati eseguiti.
+  List<int> _eserciziConSerieFatte() {
+    final out = <int>[];
+    void add(int i) {
+      if (i >= 0 && !out.contains(i) && _doneSeriesFor(i).isNotEmpty) out.add(i);
+    }
+    for (final e in _allCompletedExercises) {
+      add(widget.day.exercises.indexWhere((x) => x.name == e['exercise']));
+    }
+    for (final i in _supersetAccumulated.keys) {
+      add(i);
+    }
+    if (currentExSeries.isNotEmpty) add(exI);
+    return out;
+  }
+
+  /// Ultima serie fatta nell'allenamento: (indice esercizio, indice serie).
+  (int, int)? _ultimaSerieFatta() {
+    final last = _lastExecutedExI;
+    if (last != null && last < widget.day.exercises.length && _doneSeriesFor(last).isNotEmpty) {
+      return (last, _doneSeriesFor(last).length - 1);
+    }
+    final all = _eserciziConSerieFatte();
+    if (all.isEmpty) return null;
+    return (all.last, _doneSeriesFor(all.last).length - 1);
+  }
+
+  void _apriModificaUltimaSerie() {
+    final u = _ultimaSerieFatta();
+    if (u != null) _mostraDialogModificaSerie(u.$1, u.$2);
+  }
+
+  /// Elenco di tutte le serie fatte finora, raggruppate per esercizio; restituisce quella scelta.
+  Future<(int, int)?> _scegliSerieFatta(int curExI, int curIdx) {
     final dark = _isDarkCtx(context);
+    final accent = Theme.of(context).colorScheme.primary;
     final muted = dark ? Colors.white54 : Colors.black54;
     final unit = _displayInPounds ? 'lb' : 'kg';
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (showExName) ...[
-          Text(
-            ex.name.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: muted,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-            ),
+    return showDialog<(int, int)>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        backgroundColor: dark ? const Color(0xFF1C1C1E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          AppL.lang == 'en' ? 'Sets done' : 'Serie fatte',
+          style: TextStyle(
+            color: dark ? Colors.white : Colors.black87,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
           ),
-          const SizedBox(height: 4),
-        ],
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 6,
-          runSpacing: 6,
-          children: List.generate(series.length, (i) {
-            final s = series[i];
-            final w = (s['w'] as num?)?.toDouble() ?? 0.0;
-            final r = (s['r'] as num?)?.toInt() ?? 0;
-            final wStr = formatWeightValue(w, usePounds: _displayInPounds);
-            return _pill(
-              context,
-              'S${i + 1}  $wStr $unit x $r',
-              icon: Icons.edit_rounded,
-              fontSize: 12,
-              onTap: () => _mostraDialogModificaSerie(targetExI, i),
-            );
-          }),
         ),
-      ],
+        children: [
+          for (final i in _eserciziConSerieFatte()) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 2),
+              child: Text(
+                widget.day.exercises[i].name.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            for (final (j, s) in _doneSeriesFor(i).indexed)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(ctx, (i, j)),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'S${j + 1}  ${formatWeightValue((s['w'] as num?)?.toDouble() ?? 0.0, usePounds: _displayInPounds)} $unit x ${(s['r'] as num?)?.toInt() ?? 0}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: dark ? Colors.white : Colors.black87,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (i == curExI && j == curIdx)
+                      Icon(Icons.check_rounded, size: 18, color: accent),
+                  ],
+                ),
+              ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -7275,7 +7356,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     int targetR,
     bool suggerisciReps,
   ) {
-    final doneSeries = _doneSeriesFor(exI);
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
@@ -7289,12 +7369,8 @@ class _WorkoutEngineState extends State<WorkoutEngine>
         mainAxisSize: MainAxisSize.min,
         children: [
           if (lastR > 0) _lastVsGoal(ex),
-          if (doneSeries.isNotEmpty) ...[
-            if (lastR > 0) const SizedBox(height: 8),
-            _buildDoneSeriesChips(exI),
-          ],
           if (ex.notePT.isNotEmpty) ...[
-            if (lastR > 0 || doneSeries.isNotEmpty)
+            if (lastR > 0)
               Divider(color: _isDarkCtx(context) ? Colors.white10 : Colors.black12, height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -7389,12 +7465,7 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     final progress = timerActive
         ? (_bgCounter / _maxTime).clamp(0.0, 1.0)
         : 0.0;
-    final int doneExI = (_lastExecutedExI != null &&
-            _lastExecutedExI! >= 0 &&
-            _lastExecutedExI! < widget.day.exercises.length)
-        ? _lastExecutedExI!
-        : exI;
-    final bool hasDoneSeries = _doneSeriesFor(doneExI).isNotEmpty;
+    final bool hasDoneSeries = _ultimaSerieFatta() != null;
 
     return Scaffold(
       backgroundColor: _isDarkCtx(context) ? Colors.black : Colors.white,
@@ -7517,14 +7588,6 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                                 ),
                               ],
                             ),
-                          if (hasDoneSeries)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: _buildDoneSeriesChips(
-                                doneExI,
-                                showExName: doneExI != exI,
-                              ),
-                            ),
                           // Card prossimo esercizio
                           GestureDetector(
                             onTap: _prossimoNome.isNotEmpty
@@ -7624,35 +7687,60 @@ class _WorkoutEngineState extends State<WorkoutEngine>
                             ),
                           ),
 
-                          // SKIP
-                          _TapHere(
-                            on: widget.demoMode,
-                            radius: 50,
-                            hint: AppL.demoGuideRest,
-                            child: GestureDetector(
-                              onTap: _skipRest,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 60,
-                                  vertical: 16,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: _isDarkCtx(context) ? Colors.white.withAlpha(40) : Colors.black26,
-                                  ),
-                                  borderRadius: BorderRadius.circular(50),
-                                ),
-                                child: Text(
-                                  AppL.skip.toUpperCase(),
-                                  style: TextStyle(
-                                    letterSpacing: 3,
-                                    fontWeight: FontWeight.w600,
-                                    color: _isDarkCtx(context) ? Colors.white : Colors.black87,
-                                    fontSize: 16,
+                          // SKIP + matita per correggere le serie già fatte
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _TapHere(
+                                on: widget.demoMode,
+                                radius: 50,
+                                hint: AppL.demoGuideRest,
+                                child: GestureDetector(
+                                  onTap: _skipRest,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 60,
+                                      vertical: 16,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: _isDarkCtx(context) ? Colors.white.withAlpha(40) : Colors.black26,
+                                      ),
+                                      borderRadius: BorderRadius.circular(50),
+                                    ),
+                                    child: Text(
+                                      AppL.skip.toUpperCase(),
+                                      style: TextStyle(
+                                        letterSpacing: 3,
+                                        fontWeight: FontWeight.w600,
+                                        color: _isDarkCtx(context) ? Colors.white : Colors.black87,
+                                        fontSize: 16,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                              if (hasDoneSeries) ...[
+                                const SizedBox(width: 12),
+                                GestureDetector(
+                                  onTap: _apriModificaUltimaSerie,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(15),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: _isDarkCtx(context) ? Colors.white.withAlpha(40) : Colors.black26,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.edit_rounded,
+                                      size: 22,
+                                      color: _isDarkCtx(context) ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),

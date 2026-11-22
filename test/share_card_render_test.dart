@@ -188,6 +188,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('+4.8%'), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    // tutti gli elementi accesi: la card deve restare bassa
+    await tester.tap(find.text(AppL.microcycleBadges));
+    await tester.pumpAndSettle();
+    expect(find.text('3/4'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await _captureStoryPng(tester, 'build/share_previews/workout_share_card_all.png');
   });
 
   testWidgets('Workout share card handles extreme lengths, lb units, and first session without overflow',

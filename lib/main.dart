@@ -10873,7 +10873,7 @@ class _WorkoutShareSheet extends StatefulWidget {
 class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
   bool _showStreak = true;
   bool _showWeeklyBadges = true;
-  bool _showSessionProgress = false;
+  bool _showSessionProgress = true;
   bool _showExercises = true;
   bool _showDuration = true;
   bool _sharing = false;
@@ -10975,6 +10975,8 @@ class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
     final rows = _analyzeExercises();
     final dur = _showDuration ? _shareDurationLabel(widget.durationMinutes) : '';
     const green = Color(0xFF4CD97B);
+    final pct = widget.progressPercent;
+    final names = widget.allSessionNames.isNotEmpty ? widget.allSessionNames : widget.streakDoneNames.toList();
     return Container(
       width: 360,
       decoration: BoxDecoration(
@@ -10985,14 +10987,29 @@ class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
       padding: const EdgeInsets.all(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _shareHeader(
             accent,
             title: widget.dayName,
             date: widget.todayLabel,
-            trailing: dur.isEmpty
-                ? null
-                : _badgeChip(icon: Icons.timer_outlined, label: '', value: dur, accent: accent),
+            chips: [
+              if (dur.isNotEmpty) _shareChip(icon: Icons.timer_outlined, value: dur, accent: accent),
+              if (_showStreak)
+                _shareChip(
+                  icon: Icons.local_fire_department_rounded,
+                  value: '${widget.streak} ${AppL.microAbbr}',
+                  accent: accent,
+                ),
+            ],
+            change: _showSessionProgress && pct != null
+                ? _shareChip(
+                    icon: pct >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                    label: AppL.vsPrev,
+                    value: '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}%',
+                    accent: pct >= 0 ? green : const Color(0xFFFF6B6B),
+                  )
+                : null,
           ),
           if (_showExercises && rows.isNotEmpty) ...[
             const Divider(color: Colors.white12, height: 10),
@@ -11002,14 +11019,13 @@ class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 1),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (r.isRecord || r.improved) ...[
                       Icon(r.isRecord ? Icons.emoji_events_rounded : Icons.trending_up_rounded,
                           size: 12, color: r.isRecord ? Colors.amber : green),
                       const SizedBox(width: 4),
                     ],
-                    Flexible(
+                    Expanded(
                       child: Text(
                         r.name,
                         style: const TextStyle(color: Colors.white70, fontSize: 11),
@@ -11032,54 +11048,12 @@ class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
             if (rows.length > 8)
               Text('+${rows.length - 8}', style: const TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w700)),
           ],
-          if (_showStreak || _showWeeklyBadges || _showSessionProgress) ...[
+          if (_showWeeklyBadges && names.isNotEmpty) ...[
             const Divider(color: Colors.white12, height: 10),
-            Builder(builder: (ctx) {
-              final names = widget.allSessionNames.isNotEmpty
-                  ? widget.allSessionNames
-                  : widget.streakDoneNames.toList();
-              final pct = widget.progressPercent;
-              return Column(
-                children: [
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    alignment: WrapAlignment.center,
-                    runAlignment: WrapAlignment.center,
-                    children: [
-                      if (_showStreak)
-                        _badgeChip(
-                          icon: Icons.local_fire_department_rounded,
-                          label: '',
-                          value: '${widget.streak} ${AppL.microAbbr}',
-                          accent: accent,
-                        ),
-                      if (_showSessionProgress && pct != null)
-                        _badgeChip(
-                          icon: pct >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                          label: AppL.vsPrev,
-                          value: '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}%',
-                          accent: pct >= 0 ? const Color(0xFF4CD97B) : const Color(0xFFFF6B6B),
-                        ),
-                      if (_showWeeklyBadges && names.isNotEmpty)
-                        _badgeChip(
-                          icon: Icons.lock_open_rounded,
-                          label: '',
-                          value: '${widget.streakDoneNames.length}/${names.length}',
-                          accent: accent,
-                        ),
-                    ],
-                  ),
-                  if (_showWeeklyBadges && names.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [for (final name in names) Flexible(child: _dayBadge(name, accent))],
-                    ),
-                  ],
-                ],
-              );
-            }),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [for (final name in names) Flexible(child: _dayBadge(name, accent))],
+            ),
           ],
         ],
       ),
@@ -11128,34 +11102,6 @@ class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 7.5, color: done ? Colors.white : Colors.white38, fontWeight: FontWeight.w700),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _badgeChip({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color accent,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha(10),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: accent, size: 13),
-          const SizedBox(width: 4),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
-          if (label.isNotEmpty) ...[
-            const SizedBox(width: 4),
-            Text(label, style: const TextStyle(color: Colors.white54, fontSize: 9)),
-          ],
         ],
       ),
     );
@@ -11297,36 +11243,104 @@ class _WorkoutShareSheetState extends State<_WorkoutShareSheet> {
   }
 }
 
-/// Intestazione centrata delle card da condividere.
-Widget _shareHeader(Color accent, {required String title, required String date, Widget? trailing}) {
+/// Pillola dei numeri nelle intestazioni delle card da condividere.
+Widget _shareChip({required IconData icon, required String value, required Color accent, String label = ''}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: Colors.white.withAlpha(10),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: Colors.white12),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: accent, size: 13),
+        const SizedBox(width: 4),
+        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
+        if (label.isNotEmpty) ...[
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 9)),
+        ],
+      ],
+    ),
+  );
+}
+
+/// Intestazione giustificata delle card da condividere: marchio e «titolo · data» a sinistra,
+/// numeri a destra ([chips] accanto al marchio, [change] accanto alla data).
+Widget _shareHeader(
+  Color accent, {
+  required String title,
+  required String date,
+  required List<Widget> chips,
+  Widget? change,
+}) {
   const sub = TextStyle(color: Colors.white54, fontSize: 10.5);
-  return Column(
+  return Row(
     children: [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Image.asset(
-              'assets/icon_client.png',
-              width: 24,
-              height: 24,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Icon(Icons.fitness_center_rounded, size: 20, color: accent),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text('GymApp', style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.2)),
-          if (trailing != null) ...[const SizedBox(width: 8), trailing],
-        ],
+      ClipRRect(
+        borderRadius: BorderRadius.circular(7),
+        child: Image.asset(
+          'assets/icon_client.png',
+          width: 28,
+          height: 28,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(Icons.fitness_center_rounded, size: 22, color: accent),
+        ),
       ),
-      const SizedBox(height: 2),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: sub)),
-          Text(' · $date', maxLines: 1, style: sub),
-        ],
+      const SizedBox(width: 6),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Text('GymApp', style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.2)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        children: [
+                          for (int i = 0; i < chips.length; i++) ...[
+                            if (i > 0) const SizedBox(width: 4),
+                            chips[i],
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            LayoutBuilder(
+              builder: (_, box) => Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: sub)),
+                        Text(' · $date', maxLines: 1, style: sub),
+                      ],
+                    ),
+                  ),
+                  if (change != null) ...[
+                    const SizedBox(width: 6),
+                    // al massimo metà riga: la data resta intera anche su schermo stretto
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: box.maxWidth / 2 - 6),
+                      child: FittedBox(fit: BoxFit.scaleDown, child: change),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     ],
   );
@@ -11403,7 +11417,6 @@ class _StreakShareSheet extends StatefulWidget {
 
 class _StreakShareSheetState extends State<_StreakShareSheet> {
   bool _sharing = false;
-  bool _showBadges = true;
   final GlobalKey _cardKey = GlobalKey();
 
   Widget _buildStoryCard() {
@@ -11419,10 +11432,26 @@ class _StreakShareSheetState extends State<_StreakShareSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            AppL.streakSocialTitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+          Row(
+            children: [
+              Text(
+                'GymApp',
+                style: TextStyle(color: widget.accent, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 1.2, height: 1.1),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      AppL.getItOnPlay,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Container(
@@ -11441,7 +11470,7 @@ class _StreakShareSheetState extends State<_StreakShareSheet> {
                   '${widget.streak}',
                   style: const TextStyle(color: Colors.orange, fontSize: 40, fontWeight: FontWeight.w900, height: 1.0),
                 ),
-                if (_showBadges && names.isNotEmpty) ...[
+                if (names.isNotEmpty) ...[
                   const SizedBox(width: 10),
                   Flexible(
                     child: ConstrainedBox(
@@ -11452,16 +11481,6 @@ class _StreakShareSheetState extends State<_StreakShareSheet> {
                 ],
               ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'GymApp',
-            style: TextStyle(color: widget.accent, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 1.2, height: 1.1),
-          ),
-          Text(
-            AppL.getItOnPlay,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -11515,18 +11534,6 @@ class _StreakShareSheetState extends State<_StreakShareSheet> {
             AppL.shareStreakFire,
             style: TextStyle(color: _isDarkCtx(context) ? Colors.white : Colors.black87, fontWeight: FontWeight.w700, fontSize: 16),
           ),
-          const SizedBox(height: 8),
-          // Composer toggles
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _toggleChip(
-                label: AppL.badgesIcon,
-                active: _showBadges,
-                onTap: () => setState(() => _showBadges = !_showBadges),
-              ),
-            ],
-          ),
           const SizedBox(height: 14),
           RepaintBoundary(key: _cardKey, child: _buildStoryCard()),
           const SizedBox(height: 16),
@@ -11547,29 +11554,6 @@ class _StreakShareSheetState extends State<_StreakShareSheet> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _toggleChip({required String label, required bool active, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? widget.accent.withAlpha(40) : (_isDarkCtx(context) ? Colors.white10 : Colors.grey.shade200),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: active ? widget.accent : (_isDarkCtx(context) ? Colors.white24 : Colors.grey.shade400)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: active ? widget.accent : (_isDarkCtx(context) ? Colors.white54 : Colors.black54),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
       ),
     );
   }
@@ -11621,23 +11605,6 @@ class _ProgressShareSheetState extends State<_ProgressShareSheet> {
     }
   }
 
-  Widget _tile(String value, String label, Color color) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha(12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(value, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w800)),
-        ),
-        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 9)),
-      ]),
-    ),
-  );
-
   Widget _buildCard() {
     final accent = widget.accent;
     final pts = widget.points;
@@ -11651,12 +11618,6 @@ class _ProgressShareSheetState extends State<_ProgressShareSheet> {
     final span = (hi - lo).abs() < 1 ? 1.0 : hi - lo;
     lo = (lo - span * 0.15).clamp(0.0, double.infinity);
     hi += span * 0.15;
-    final tiles = <Widget>[
-      if (_includeSessionCount) _tile('${pts.length}', isMicro ? AppL.microcycles : AppL.sessions, Colors.white),
-      if (_includeStreak) _tile('${widget.streak}', 'Streak', accent),
-      if (_includeTrend && pts.length >= 2)
-        _tile('${trend >= 0 ? '+' : ''}${trend.toStringAsFixed(0)}%', 'Trend', trend >= 0 ? _kUp : _kDown),
-    ];
     final now = DateTime.now();
     return Container(
       width: 360,
@@ -11670,7 +11631,35 @@ class _ProgressShareSheetState extends State<_ProgressShareSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _shareHeader(accent, title: AppL.overallProgress, date: '${now.day}/${now.month}/${now.year}'),
+          _shareHeader(
+            accent,
+            title: AppL.overallProgress,
+            date: '${now.day}/${now.month}/${now.year}',
+            chips: [
+              if (_includeSessionCount)
+                _shareChip(
+                  icon: Icons.repeat_rounded,
+                  value: '${pts.length}',
+                  label: isMicro ? AppL.microcycles : AppL.sessions,
+                  accent: accent,
+                ),
+              if (_includeStreak)
+                _shareChip(
+                  icon: Icons.local_fire_department_rounded,
+                  value: '${widget.streak}',
+                  label: 'Streak',
+                  accent: accent,
+                ),
+            ],
+            change: _includeTrend && pts.length >= 2
+                ? _shareChip(
+                    icon: trend >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                    value: '${trend >= 0 ? '+' : ''}${trend.toStringAsFixed(0)}%',
+                    label: 'Trend',
+                    accent: trend >= 0 ? _kUp : _kDown,
+                  )
+                : null,
+          ),
           if (values.isNotEmpty) ...[
             const SizedBox(height: 8),
             SizedBox(
@@ -11689,21 +11678,12 @@ class _ProgressShareSheetState extends State<_ProgressShareSheet> {
               ),
             ),
           ],
-          if (tiles.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Row(children: [
-              for (int i = 0; i < tiles.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
-                tiles[i],
-              ],
-            ]),
-          ],
           if (_includeTop && widget.top.isNotEmpty) ...[
             const SizedBox(height: 6),
             ...widget.top.take(3).map((t) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 1),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Flexible(
+              child: Row(children: [
+                Expanded(
                   child: Text(t.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

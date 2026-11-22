@@ -54,6 +54,17 @@ void _expectCentered(WidgetTester tester, Finder left, Finder right) {
   expect(mid, closeTo(tester.getCenter(_card()).dx, 1.5));
 }
 
+// la riga da [left] a [right] deve toccare i due margini interni (padding 12 + bordo 1)
+void _expectJustified(WidgetTester tester, Finder left, Finder right) {
+  expect(tester.getRect(left).left, closeTo(tester.getRect(_card()).left + 13, 1.5));
+  expect(tester.getRect(right).right, closeTo(tester.getRect(_card()).right - 13, 1.5));
+}
+
+// [a] e [b] sulla stessa riga
+void _expectInline(WidgetTester tester, Finder a, Finder b) {
+  expect(tester.getCenter(a).dy, closeTo(tester.getCenter(b).dy, 2));
+}
+
 Future<void> _captureStoryPng(
   WidgetTester tester,
   String outPath,
@@ -191,18 +202,27 @@ void main() {
 
     await _captureStoryPng(tester, 'build/share_previews/workout_share_card.png');
 
+    // durata, streak e % in testa; i badge senza lucchetto
+    expect(find.text('3/4'), findsNothing);
+    expect(find.byIcon(Icons.lock_open_rounded), findsNothing);
+    expect(find.text('Upper'), findsOneWidget);
+    expect(tester.getSize(_card()).height, lessThanOrEqualTo(240));
+    _expectInline(tester, find.text('GymApp'), find.text('58 min'));
+    _expectInline(tester, find.text('GymApp'), find.text('6 ${AppL.microAbbr}'));
+    _expectInline(tester, find.text(' · 16 nov 2026'), find.text('+4.8%'));
+    expect(tester.getRect(find.text('Push · Petto & Spalle')).left,
+        closeTo(tester.getRect(find.text('GymApp')).left, 1));
+    _expectJustified(tester, find.text('French press bilanciere EZ'), find.text('35 kg × 10'));
+    _expectCentered(tester, find.text('Push'), find.text('Upper'));
+
     // Verify toggling chips cleanly updates the card without layout errors
-    await tester.tap(find.text(AppL.vsPrevious));
+    await tester.tap(find.text(AppL.vsPrevious).last);
+    await tester.pumpAndSettle();
+    expect(find.text('+4.8%'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text(AppL.vsPrevious).last);
     await tester.pumpAndSettle();
     expect(find.text('+4.8%'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-
-    // i badge sono già accesi: tutti gli elementi, card bassa e centrata
-    expect(find.text('3/4'), findsOneWidget);
-    expect(find.text('Upper'), findsOneWidget);
-    expect(tester.getSize(_card()).height, lessThanOrEqualTo(260));
-    _expectCentered(tester, find.text('French press bilanciere EZ'), find.text('35 kg × 10'));
-    _expectCentered(tester, find.text('Push'), find.text('Upper'));
     await _captureStoryPng(tester, 'build/share_previews/workout_share_card_all.png');
   });
 
@@ -292,8 +312,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text(AppL.getItOnPlay), findsOneWidget);
-    expect(tester.getSize(_card()).height, lessThanOrEqualTo(170));
+    _expectInline(tester, find.text('GymApp'), find.text(AppL.getItOnPlay));
+    _expectJustified(tester, find.text('GymApp'), find.text(AppL.getItOnPlay));
+    expect(find.byType(GestureDetector).evaluate().where((e) => (e.widget as GestureDetector).child is AnimatedContainer),
+        isEmpty, reason: 'badge fissi, nessun comando');
+    expect(tester.getSize(_card()).height, lessThanOrEqualTo(140));
     await _captureStoryPng(tester, 'build/share_previews/streak_share_card.png');
   });
 
@@ -318,9 +341,32 @@ void main() {
       expect(tester.takeException(), isNull, reason: lang);
     }
     await _captureStoryPng(tester, 'build/share_previews/streak_share_card_extreme.png');
-    await tester.tap(find.text(AppL.badgesIcon));
+
+    for (final lang in ['en', 'es', 'pt', 'fr', 'de', 'el', 'ar', 'pl', 'ro', 'hu', 'it']) {
+      AppL.setLang(lang);
+      await tester.pumpWidget(_wrapSheet(
+        testWorkoutShareSheet(
+          dayName: days.first,
+          todayLabel: '30 nov 2026', // il formato più lungo tra i due dell'app
+          exercises: const [],
+          durationMinutes: 125,
+          progressPercent: -112.5,
+          streak: 128,
+          allSessionNames: days,
+          streakDoneNames: done,
+          accent: const Color(0xFF00F2FF),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: lang);
+    }
+    await _captureStoryPng(tester, 'build/share_previews/workout_share_card_320.png');
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
     await tester.pumpAndSettle();
-    _expectCentered(tester, find.byIcon(Icons.local_fire_department_rounded), find.text('128'));
+    expect(tester.takeException(), isNull, reason: 'testo di sistema 1.3');
+    await _captureStoryPng(tester, 'build/share_previews/workout_share_card_320_big.png');
+    tester.platformDispatcher.clearTextScaleFactorTestValue();
+    await tester.pumpAndSettle();
 
     await tester.pumpWidget(_wrapSheet(
       testWorkoutShareSheet(
@@ -391,9 +437,22 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(tester.getSize(_card()).height, lessThanOrEqualTo(270));
-    _expectCentered(tester, find.text('Squat bilanciere'), find.text('+12%'));
+    expect(tester.getSize(_card()).height, lessThanOrEqualTo(230));
+    _expectJustified(tester, find.text('Squat bilanciere'), find.text('+12%'));
+    _expectInline(tester, find.text('GymApp'), find.text('Streak').first);
     await _captureStoryPng(tester, 'build/share_previews/progress_share_card.png');
+
+    await tester.binding.setSurfaceSize(const Size(320, 915));
+    addTearDown(() => AppL.setLang('it'));
+    for (final lang in ['en', 'es', 'pt', 'fr', 'el', 'ar', 'pl', 'ro', 'hu', 'de']) {
+      AppL.setLang(lang);
+      await tester.pumpWidget(_wrapSheet(
+        testProgressShareSheet(streak: 128, points: points, top: const [], accent: const Color(0xFF00F2FF)),
+      ));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: lang);
+    }
+    await _captureStoryPng(tester, 'build/share_previews/progress_share_card_320.png');
   });
 
   test('updateHistoryEntrySeries aggiorna la voce con stesso session_id ed exercise', () {

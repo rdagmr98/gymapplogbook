@@ -7593,14 +7593,16 @@ class _WorkoutEngineState extends State<WorkoutEngine>
     final today = currentExSeries.where((e) => (e['s'] as num?)?.toInt() == s - 1);
     // la serie prima, oggi e la volta scorsa: dice com'è la forma di oggi (progressionPlan)
     final lp = s > 1 ? _getSuggest(ex.name, s - 1) : const {};
+    // le serie dopo della volta scorsa allo stesso peso contano anche per questa (refReps)
+    final prev = _previousResults[ex.name] ?? const <Map>[];
     return progressionPlan(
       target: ex.repsList.isEmpty ? 10 : ex.repsList[scala.min(s, ex.repsList.length) - 1],
       lastKg: w(p),
-      lastReps: r(p),
+      lastReps: refReps(prev, s, w(p), r(p)),
       todayPrevKg: today.isEmpty ? null : w(today.last),
       todayPrevReps: today.isEmpty ? 0 : r(today.last),
       lastPrevKg: w(lp),
-      lastPrevReps: r(lp),
+      lastPrevReps: s > 1 ? refReps(prev, s - 1, w(lp), r(lp)) : 0,
       step: _steps.putIfAbsent(ex.name, () => weightStep(widget.history, ex.name)),
     );
   }

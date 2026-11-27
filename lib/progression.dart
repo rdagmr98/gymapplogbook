@@ -3,6 +3,19 @@ typedef ProgressionPlan = ({double kg, int reps, int target, bool aumento, int? 
 /// Massimale stimato di una serie (formula di Epley): mette sulla stessa scala serie con pesi e reps diversi.
 double e1rm(num w, num r) => w * (1 + r / 30);
 
+/// Reps di riferimento della serie [s] (da 1) della volta scorsa ([kg]×[reps]): una serie dopo allo stesso peso,
+/// fatta più stanchi, dice che questa ne regge almeno altrettante (80×10 poi 80×12: la prima ne regge 12).
+/// Bug utente del 2026-11-27: la prima serie non proponeva nulla. Le piramidi (pesi diversi) non contano.
+int refReps(List<Map> last, int s, double kg, int reps) {
+  var best = reps;
+  for (final m in last.skip(s)) {
+    final w = ((m['w'] ?? m['weight'] ?? 0) as num).toDouble();
+    final r = ((m['r'] ?? m['reps'] ?? 0) as num).toInt();
+    if (w == kg && r > best) best = r;
+  }
+  return best;
+}
+
 /// Proposta per una serie. Le serie non sono indipendenti (richiesta dell'utente del 2026-11-15):
 /// - forza di oggi su questa serie = massimale della stessa serie la volta scorsa ([lastKg]×[lastReps]),
 ///   corretto da come è andata oggi la serie prima rispetto alla serie prima della volta scorsa
